@@ -162,3 +162,38 @@ func TestLimiterRejectsBadRate(t *testing.T) {
 		t.Fatalf("second wait at +%v, want +1s", got[1])
 	}
 }
+
+// TestLimiterWaitBefore checks that a slot at or after the deadline is refused without being
+// reserved.
+func TestLimiterWaitBefore(t *testing.T) {
+	clk := clock.NewFake(t0)
+	lim, err := NewLimiter(clk, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	deadline := t0.Add(1500 * time.Millisecond)
+
+	if ok, err := lim.WaitBefore(ctx, deadline); !ok || err != nil {
+		t.Fatalf("first slot = %v, %v; want true, nil", ok, err)
+	}
+	done := make(chan bool)
+	go func() {
+		ok, _ := lim.WaitBefore(ctx, deadline)
+		done <- ok
+	}()
+	clk.BlockUntil(1)
+	clk.Advance(time.Second)
+	if !<-done {
+		t.Fatal("slot at +1s refused before a +1.5s deadline")
+	}
+	if ok, err := lim.WaitBefore(ctx, deadline); ok || err != nil {
+		t.Fatalf("slot at +2s = %v, %v; want false, nil", ok, err)
+	}
+	if ok, _ := lim.WaitBefore(ctx, t0.Add(2*time.Second)); ok {
+		t.Fatal("slot exactly at the deadline was handed out")
+	}
+	if got := driveWaits(t, clk, lim, []time.Duration{2 * time.Second}); got[0] != 2*time.Second {
+		t.Fatalf("Wait after refused slots at +%v, want +2s (refusals reserve nothing)", got[0])
+	}
+}

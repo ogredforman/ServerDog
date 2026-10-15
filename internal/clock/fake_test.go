@@ -158,3 +158,20 @@ func TestFakeBlockUntil(t *testing.T) {
 		t.Errorf("Pending() = %d, want 2", f.Pending())
 	}
 }
+
+func TestFakeNext(t *testing.T) {
+	f := NewFake(t0)
+	if _, ok := f.Next(); ok {
+		t.Fatal("Next with no timers reports one pending")
+	}
+	f.After(5 * time.Second)
+	f.After(2 * time.Second)
+	f.After(9 * time.Second)
+	if next, ok := f.Next(); !ok || !next.Equal(t0.Add(2*time.Second)) {
+		t.Fatalf("Next = %v, %v; want +2s, true", next, ok)
+	}
+	f.Advance(3 * time.Second)
+	if next, ok := f.Next(); !ok || !next.Equal(t0.Add(5*time.Second)) {
+		t.Fatalf("Next after firing = %v, %v; want +5s, true", next, ok)
+	}
+}

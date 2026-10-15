@@ -132,7 +132,13 @@ func NextUpdateAt(snap source.Snapshot, now time.Time, pollDelay time.Duration) 
 // Stale reports whether the data must be flagged stale: the provider says so, or the
 // snapshot is older than 2 × RefreshEvery + 60s (SPEC §7.1, §7.5).
 func Stale(snap source.Snapshot, now time.Time) bool {
-	return snap.Stale || now.Sub(snap.FetchedAt) > 2*snap.RefreshEvery+time.Minute
+	return snap.Stale || now.After(StaleAt(snap))
+}
+
+// StaleAt returns the age limit for snap: from just after this time, with no newer snapshot,
+// the data is stale (2 × RefreshEvery + 60s after FetchedAt).
+func StaleAt(snap source.Snapshot) time.Time {
+	return snap.FetchedAt.Add(2*snap.RefreshEvery + time.Minute)
 }
 
 // Write writes f to dir/servers.json atomically: a temp file in dir, then a rename.

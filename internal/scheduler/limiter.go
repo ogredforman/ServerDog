@@ -57,8 +57,22 @@ func (l *Limiter) PauseUntil(t time.Time) {
 // Wait blocks until the caller may make one upstream request, or ctx is done. A slot reserved
 // before ctx is done stays used, which errs on the side of fewer requests.
 func (l *Limiter) Wait(ctx context.Context) error {
+	_, err := l.wait(ctx, time.Time{})
+	return err
+}
+
+// WaitBefore is Wait, except that it reserves no slot and returns false at once if the next
+// slot would not come before deadline. The sweep uses it to stop as soon as the next snapshot
+// is due (SPEC §7.1 step 6). A zero deadline means no limit.
+func (l *Limiter) WaitBefore(ctx context.Context, deadline time.Time) (bool, error) {
+	return l.wait(ctx, deadline)
+}
+
+// wait reserves the next slot, unless deadline is set and the slot is not before it, and
+// sleeps until the slot.
+func (l *Limiter) wait(ctx context.Context, deadline time.Time) (bool, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return false, err
 	}
 	l.mu.Lock()
 	now := l.clk.Now()
@@ -66,17 +80,21 @@ func (l *Limiter) Wait(ctx context.Context) error {
 	if at.Before(now) {
 		at = now
 	}
+	if !deadline.IsZero() && !at.Before(deadline) {
+		l.mu.Unlock()
+		return false, nil
+	}
 	l.next = at.Add(l.interval)
 	l.mu.Unlock()
 
 	if !at.After(now) {
-		return nil
+		return true, nil
 	}
 	select {
 	case <-l.clk.After(at.Sub(now)):
-		return nil
+		return true, nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return false, ctx.Err()
 	}
 }
 

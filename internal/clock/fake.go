@@ -114,3 +114,17 @@ func (f *Fake) BlockUntil(n int) {
 		f.cond.Wait()
 	}
 }
+
+// Next returns the earliest pending After deadline, or false if none is pending. Tests use it
+// with BlockUntil to step the clock from one wake-up to the next.
+func (f *Fake) Next() (time.Time, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var next time.Time
+	for i, t := range f.timers {
+		if i == 0 || t.at.Before(next) {
+			next = t.at
+		}
+	}
+	return next, len(f.timers) > 0
+}
