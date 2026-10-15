@@ -29,7 +29,7 @@ Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog`
 - **source/fake** (SPEC §10.4): `New(clk)` scriptable fake Source for tests (records `Calls()`); `NewWorld(clk, seed)` deterministic generated world for `source=fake` (`WorldServers`, `WorldRefresh`; pure function of seed + clock time, no call record).
 - **clock** (`internal/clock`, SPEC §10.3–10.4): only source of time under `internal/`. Key: `Clock{Now, After}`, `Real`, `Fake` (`NewFake`, `Set`, `Advance` fires due `After`s in deadline order, `Pending`, `BlockUntil(n)` to sync with goroutines parked on `After`).
 - **config** (`internal/config`, SPEC §8 Configuration): `Load(args, getenv) (Config, error)`; flags (`--burst-rate`) → env (`SERVERDOG_BURST_RATE`) → JSON file (`--config`/`SERVERDOG_CONFIG`, key `burst_rate`) → defaults. One `settings()` table holds key, default and validation.
-- **tracker** (SPEC §7.2–7.3): per-server state, tiers P0–P3, cache file. Placeholder until PLAN 1.4 (persistence 2.3).
+- **tracker** (`internal/tracker`, SPEC §7.2–7.3): clockless per-join-code state machine (callers pass times). Key: `New(Options)`, `Observe(snap)`, `Queue() []Due` (P0, P1, P2, P3 by oldest `CheckedAt`), `Apply(id, ms, checkedAt)`, `Published(id, now)` (exact/estimate/starting/unknown), `Get`. Set `ChangeObservedAt` = unconfirmed estimate. Cache file in PLAN 2.3.
 - **scheduler** (SPEC §7.1): poll timing, rate limiter, backoff, burst/sweep cycle. Placeholder until PLAN 1.5, 1.7.
 - **publish** (SPEC §7.4, §8 Published data): `servers.json` model, stale flag, atomic write. Placeholder until PLAN 1.6.
 - **web** (`internal/web`, SPEC §8 HTTP serving): embedded static files and `/data/servers.json` with `Cache-Control`. Key: `Handler() http.Handler`. Data serving arrives in PLAN 1.8.
@@ -42,7 +42,7 @@ Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog`
 
 ## Tests and fixtures
 
-- `internal/web/web_test.go`: `httptest` against `Handler()`. `internal/config/config_test.go`: precedence and validation tables, files in `t.TempDir()`. `internal/source/source_test.go`, `internal/clock/clock_test.go`: table-driven type/helper tests.
+- `internal/web/web_test.go`: `httptest` against `Handler()`. `internal/config/config_test.go`: precedence and validation tables, files in `t.TempDir()`. `internal/tracker/tracker_test.go`: per-rule tier, apply and published tables (`srv`/`snap` helpers). `internal/source/source_test.go`, `internal/clock/clock_test.go`: table-driven type/helper tests.
 - `web-tests/`: `node --test` files for `js/logic`; `smoke.test.js` is a placeholder.
 - `testdata/wardogservers/`: recorded upstream fixtures for `httptest.Server`; empty until PLAN 2.1.
 - Fake clock `clock.NewFake` and fake Source `fake.New(clk)`: use these in scheduler/tracker tests; assert politeness on `Calls()`. No test touches the network.

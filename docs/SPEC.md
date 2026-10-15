@@ -63,7 +63,7 @@ The design must not *preclude*:
 | **Server** | One game server as reported in a snapshot (provider-neutral) | `ID` (join code; may be empty), `InstanceID`, `Type` (official/community), `Region`, `Name`, `Players`, `MaxPlayers`, `PasswordProtected`, `Map{Variant, Base}`, `Mode{Experience, GameMode, Modifiers}`, `Rulesets`, `ObservedAt`, `MatchStart` (optional; set only if the provider's bulk list carries it) |
 | **Snapshot** | One complete provider listing | `ID`, `FetchedAt`, `RefreshEvery`, `Stale`, `Complete`, `Servers[]`, `Tag` (opaque, for conditional fetches) |
 | **MatchStart** | What we know about when a server's current match started | `State` (exact / not-started / unknown), `At` (time, when exact) |
-| **TrackedServer** | Tracker state per join code, kept across snapshots and saved to disk | `ID`, last `InstanceID`, last `Map.Variant`, last `Mode.Experience`, last `Players`, `ChangeObservedAt` (when a new match was last inferred), `Start` (MatchStart), `CheckedAt` (last detail fetch), `CheckedSnapshotID`, `Tier` |
+| **TrackedServer** | Tracker state per join code, kept across snapshots and saved to disk | `ID`, last `InstanceID`, last `Map.Variant`, last `Mode.Experience`, last `Players`, `ChangeObservedAt` (when a new match was last inferred; cleared once a start confirms it), `Start` (MatchStart), `CheckedAt` (last detail fetch), `CheckedSnapshotID`, `Tier`, `LastSeen` (for eviction) |
 | **Region** | A region identifier seen in snapshots | `ID` (e.g. `na-east`), display name (mapping from screenshots, falls back to ID) |
 | **Published file** (`servers.json`) | What the browser reads | see §8 "Published data" |
 
@@ -94,22 +94,23 @@ Published file = latest Snapshot ⨝ TrackedServer state, rendered per Server
 ### 7.2 Tracking match starts per snapshot
 
 For each server in the new snapshot that has a join code:
-1. **Empty (`Players == 0`):** record state, never queue. Start becomes unknown.
+1. **Empty (`Players == 0`):** record state, never queue. Start becomes unknown and `ChangeObservedAt` is cleared.
 2. **New to the tracker:** queue as **P2**.
 3. **Instance, map variant or experience changed since the last snapshot:** set `ChangeObservedAt = snapshot.FetchedAt`, mark the start as estimated, queue as **P0**.
 4. **Sharp player drop** (≥ `DropPct` default 30% *and* ≥ `DropMin` default 25 players vs. the previous snapshot): queue as **P0**, but don't set `ChangeObservedAt`.
-5. **Waiting for a start:** `ChangeObservedAt` is within `StartingWindow` (default 20 min), and the known start is not-started or earlier than `ChangeObservedAt − RefreshEvery`. Queue as **P1**. Once the window has passed, stop rechecking as P1.
+5. **Waiting for a start:** `ChangeObservedAt` is within `StartingWindow` (default 20 min), and the change is not yet confirmed (§7.3; the known start is not-started, unknown, or earlier than `ChangeObservedAt − RefreshEvery`). Queue as **P1**. Once the window has passed, stop rechecking as P1.
 6. **Otherwise:** eligible for **P3** sweep, ordered by oldest `CheckedAt`.
 7. Never queue a server whose `CheckedSnapshotID` equals the current snapshot ID.
-8. If the provider's `Server.MatchStart` is set, use it directly and don't queue the server at all.
+8. If the provider's `Server.MatchStart` is set, use it directly (it confirms any change) and don't queue the server at all.
 
 Servers that left the snapshot are dropped from the tracker after 1 hour.
 
 ### 7.3 Applying a detail result
 
 1. `Source.MatchStart(ctx, id)` returns exact(time), not-started, or unknown.
-2. Exact: store it. If `At` is later than `ChangeObservedAt`, the match is confirmed. If it's within one `RefreshEvery` before it, the match is also accepted (snapshot rounding). If it's older than that and we're still inside `StartingWindow`, keep it queued as P1.
+2. Exact: store it. If `At` is later than `ChangeObservedAt`, the match is confirmed. If it's within one `RefreshEvery` before it, the match is also accepted (snapshot rounding). If it's older than that and we're still inside `StartingWindow`, keep it queued as P1; once the window has passed, it is accepted. Confirming clears `ChangeObservedAt`.
 3. Not-started: keep the server queued as P1 while inside `StartingWindow`.
+   Unknown: keep the previous start (still counts as this snapshot's check).
 4. Errors on one server: skip it this cycle and keep its previous state. Repeated 429/503 pause all detail fetching (with backoff) and cut the burst short. Unchecked P0 servers then publish as estimates.
 
 ### 7.4 Publish

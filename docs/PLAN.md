@@ -60,7 +60,7 @@ and unpredictability.
 
 ### Backend core loop
 
-- [ ] **1.4** Implement the tracker in `internal/tracker`:
+- [x] **1.4** Implement the tracker in `internal/tracker`:
   - per-join-code state;
   - tier classification exactly per SPEC §7.2 (empty skip, new → P2, change → P0 with `ChangeObservedAt`, player drop → P0, P1 window, P3 by oldest `CheckedAt`, one fetch per snapshot ID, provider-supplied `MatchStart` bypass, 1h eviction);
   - applying detail results per SPEC §7.3;
