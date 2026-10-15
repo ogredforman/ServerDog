@@ -46,6 +46,12 @@ func TestHandler(t *testing.T) {
 		{"data", true, http.MethodGet, "/data/servers.json", http.StatusOK, "public, max-age=30, s-maxage=30", "application/json", dataBody},
 		{"data HEAD", true, http.MethodHead, "/data/servers.json", http.StatusOK, "public, max-age=30, s-maxage=30", "application/json", ""},
 		{"data POST", true, http.MethodPost, "/data/servers.json", http.StatusNotFound, "no-store", "", ""},
+		{"js asset", false, http.MethodGet, "/js/logic/timer.js", http.StatusOK, "public, max-age=60, s-maxage=300", "text/javascript; charset=utf-8", "export function formatTimer"},
+		{"js app HEAD", false, http.MethodHead, "/js/app.js", http.StatusOK, "public, max-age=60, s-maxage=300", "text/javascript; charset=utf-8", ""},
+		{"missing js asset", false, http.MethodGet, "/js/nope.js", http.StatusNotFound, "no-store", "", ""},
+		{"js directory", false, http.MethodGet, "/js/logic/", http.StatusNotFound, "no-store", "", ""},
+		{"js unknown type", false, http.MethodGet, "/js/logic", http.StatusNotFound, "no-store", "", ""},
+		{"unclean path redirect", false, http.MethodGet, "/js/../index.html", http.StatusTemporaryRedirect, "no-store", "", ""},
 		{"other data file", true, http.MethodGet, "/data/tracker.json", http.StatusNotFound, "no-store", "", ""},
 	}
 	for _, tt := range tests {

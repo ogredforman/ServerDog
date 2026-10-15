@@ -2,10 +2,13 @@
 package web
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -17,9 +20,17 @@ import (
 //go:embed static
 var static embed.FS
 
+// assetTypes are the static asset extensions served, with a fixed Content-Type so the
+// result doesn't depend on the host's MIME registry.
+var assetTypes = map[string]string{
+	".js":  "text/javascript; charset=utf-8",
+	".css": "text/css; charset=utf-8",
+}
+
 // Cache-Control values from SPEC §7.4 and §8 HTTP serving.
 const (
 	cacheIndex    = "public, max-age=60, s-maxage=300"
+	cacheAsset    = cacheIndex // unversioned assets; ?v= versioning and immutable come at [M]
 	cacheNotFound = "no-store"
 	minDataMaxAge = 5 // seconds; floor for servers.json max-age
 )
@@ -42,6 +53,7 @@ func New(clk clock.Clock, dataDir string) *Site {
 	s := &Site{clk: clk, dataDir: dataDir, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /{$}", serveIndex)
 	s.mux.HandleFunc("GET /data/"+publish.FileName, s.serveData)
+	s.mux.HandleFunc("GET /js/{path...}", serveAsset)
 	s.mux.HandleFunc("/", notFound)
 	return s
 }
@@ -57,6 +69,9 @@ func (s *Site) Published(f publish.File) {
 }
 
 func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Default for responses the mux writes itself, such as its clean-path redirects.
+	// Handlers replace it.
+	w.Header().Set("Cache-Control", cacheNotFound)
 	s.mux.ServeHTTP(w, r)
 }
 
@@ -113,4 +128,23 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", cacheIndex)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(body)
+}
+
+// serveAsset serves a file of a known type from the embedded static FS. Directories and
+// anything else return 404.
+func serveAsset(w http.ResponseWriter, r *http.Request) {
+	name := path.Join("static", path.Clean("/"+r.URL.Path))
+	ctype, ok := assetTypes[path.Ext(name)]
+	if !ok {
+		notFound(w, r)
+		return
+	}
+	body, err := fs.ReadFile(static, name)
+	if err != nil {
+		notFound(w, r)
+		return
+	}
+	w.Header().Set("Cache-Control", cacheAsset)
+	w.Header().Set("Content-Type", ctype)
+	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(body))
 }

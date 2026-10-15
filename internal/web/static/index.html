@@ -4,14 +4,45 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ServerDog</title>
+  <script type="module" src="/js/app.js"></script>
 </head>
 <body>
-  <header>
+  <header id="navbar">
     <strong>ServerDog</strong>
     <small>Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.</small>
+    <p id="stale-notice" role="status" hidden></p>
   </header>
   <main>
-    <p>Server browser coming soon.</p>
+    <section id="type-picker" hidden>
+      <h2>Choose server type</h2>
+      <button type="button" data-type="o">Official</button>
+      <button type="button" data-type="c">Community</button>
+    </section>
+    <section id="browser" hidden>
+      <div id="controls">
+        <button type="button" id="change-type"></button>
+        <fieldset id="regions">
+          <legend>Regions</legend>
+        </fieldset>
+        <label><input type="checkbox" id="show-full"> Show Full</label>
+        <label><input type="checkbox" id="show-empty"> Show Empty</label>
+      </div>
+      <table id="server-list">
+        <thead>
+          <tr>
+            <th aria-sort="none"><button type="button" data-sort="name">Name</button></th>
+            <th aria-sort="none"><button type="button" data-sort="players">Players</button></th>
+            <th aria-sort="none"><button type="button" data-sort="map">Map / mode</button></th>
+            <th aria-sort="none"><button type="button" data-sort="rulesets">Rulesets</button></th>
+            <th aria-sort="none"><button type="button" data-sort="password">Password</button></th>
+            <th aria-sort="none"><button type="button" data-sort="timer">Match time</button></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="empty" hidden></p>
+    </section>
+    <p id="load-status" role="status">Loading servers…</p>
   </main>
   <footer>
     <small>Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.</small>

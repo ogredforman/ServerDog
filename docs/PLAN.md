@@ -94,7 +94,7 @@ and unpredictability.
 
   Each has `node --test` coverage in `web-tests/` (SPEC §7.5, §8 Browser UI, §12).
 - [x] **1.10** Write the refresh scheduler module: next fetch at `nextUpdateAt` + random 0–10s (randomness injected), backoff 15s→30s→60s when `generatedAt` hasn't changed or the fetch fails, keep the last good data. Injected `now`/`fetch`/`setTimeout`, with `node --test` coverage (SPEC §7.5 step 4).
-- [ ] **1.11** Build the unstyled page structure (SPEC §11):
+- [x] **1.11** Build the unstyled page structure (SPEC §11):
   - navbar with placeholder disclaimer text and a stale notice slot;
   - type picker shown on first visit;
   - multi-region selection built from `regions`;
@@ -219,3 +219,5 @@ not from this list. Candidates:
 ## Parked
 
 Ideas and tangents captured mid-work (via `/devflow:park`). Not scheduled. Review them at the start of each stage.
+
+- **[M] Versioned static assets** (from PLAN 1.11): `/js/*` is served unversioned with the index policy (`public, max-age=60, s-maxage=300`). At [M], fill `?v=<content hash>` into `index.html` at startup and serve versioned assets `public, max-age=31536000, immutable` (SPEC §8 HTTP serving).
