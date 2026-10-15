@@ -56,7 +56,7 @@ and unpredictability.
 
 - [x] **1.1** Build the fake clock (settable `Now`, `Advance` firing due `After` channels in order) and the scriptable fake `Source`. The fake Source takes a scripted sequence of snapshots and per-server match starts, can inject errors per call (`ErrNotModified`, `RetryAfterError`, timeout, generic error), and records every call with the server ID and fake-clock time. Tests for both (SPEC §10.4).
 - [x] **1.2** Add the fake Source's world generator for `source=fake`. It produces a few hundred official and community servers across regions, rotates maps on a schedule, and moves starts from `-1` to exact. It also includes empty, full and 0/0 servers. Deterministic given a seed and clock. Tests check a rotation produces the expected change pattern (SPEC §10.4).
-- [ ] **1.3** Implement config loading in `internal/config`. Precedence: flags, then `SERVERDOG_*` env, then optional JSON file (`--config`), then defaults. Covers every setting in SPEC §8 Configuration, with local-dev defaults (`:8080`, `./data`, real provider). Unknown file keys and invalid values are startup errors. Table-driven precedence and validation tests (SPEC §8 Configuration, §5 "Defaults suit local development").
+- [x] **1.3** Implement config loading in `internal/config`. Precedence: flags, then `SERVERDOG_*` env, then optional JSON file (`--config`), then defaults. Covers every setting in SPEC §8 Configuration, with local-dev defaults (`:8080`, `./data`, real provider). Unknown file keys and invalid values are startup errors. Table-driven precedence and validation tests (SPEC §8 Configuration, §5 "Defaults suit local development").
 
 ### Backend core loop
 
