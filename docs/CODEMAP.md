@@ -26,7 +26,7 @@ Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog`
 
 - **source** (`internal/source`, SPEC §6.1, §10.3): provider-neutral interface and types. Key: `Source{Snapshot(ctx, prevTag), MatchStart(ctx, serverID)}`, `Snapshot`, `Server`, `ServerType`, `MatchStart`, `MatchStartState`, `Map`, `Mode`, `ErrNotModified`, `RetryAfterError`.
 - **source/wardogservers** (SPEC §8 Data provider, §10.3): api.wardogservers.com adapter; all provider URLs, JSON, `int64:` ticks, ETags live here. Placeholder until PLAN 2.1.
-- **source/fake** (SPEC §10.4): scriptable fake Source and `source=fake` world generator. Placeholder until PLAN 1.1–1.2.
+- **source/fake** (SPEC §10.4): `New(clk)` scriptable fake Source for tests (records `Calls()`); `NewWorld(clk, seed)` deterministic generated world for `source=fake` (`WorldServers`, `WorldRefresh`; pure function of seed + clock time, no call record).
 - **clock** (`internal/clock`, SPEC §10.3–10.4): only source of time under `internal/`. Key: `Clock{Now, After}`, `Real`, `Fake` (`NewFake`, `Set`, `Advance` fires due `After`s in deadline order, `Pending`, `BlockUntil(n)` to sync with goroutines parked on `After`).
 - **config** (SPEC §8 Configuration): flags → `SERVERDOG_*` env → JSON file → defaults. Placeholder until PLAN 1.3.
 - **tracker** (SPEC §7.2–7.3): per-server state, tiers P0–P3, cache file. Placeholder until PLAN 1.4 (persistence 2.3).
@@ -46,4 +46,5 @@ Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog`
 - `web-tests/`: `node --test` files for `js/logic`; `smoke.test.js` is a placeholder.
 - `testdata/wardogservers/`: recorded upstream fixtures for `httptest.Server`; empty until PLAN 2.1.
 - Fake clock `clock.NewFake` and fake Source `fake.New(clk)`: use these in scheduler/tracker tests; assert politeness on `Calls()`. No test touches the network.
+- `fake.NewWorld(clk, seed)`: realistic multi-hundred-server data (rotations, player drops, not-started → exact) for scenario or publish tests that need volume.
 - One package: `go test ./internal/<pkg>/`. One frontend file: `node --test web-tests/<file>.test.js`.
