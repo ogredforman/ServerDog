@@ -36,13 +36,13 @@ Signatures here are summaries; `go doc ./internal/<pkg>` (or `go doc ./internal/
 ## Frontend
 
 - `internal/web/static/`: embedded via `go:embed`; currently only a placeholder `index.html`.
-- `internal/web/static/js/logic/` (pure; `now` in Unix ms, JSON times in Unix s): `timer.js` `formatDuration`, `formatTimer(server, now)` → `{text, kind}`; `filters.js` `isFull`, `isEmpty`, `filterServers(servers, {type, regions, showFull, showEmpty})` (empty regions = all); `sort.js` `sortServers(servers, {column, dir})`, `sortColumns`, `freshStartsOrder`; `stale.js` `isStale(data, now)`; `clock.js` `clockOffset(dateHeader, localNow)`. Refresh scheduler: PLAN 1.10.
+- `internal/web/static/js/logic/` (pure; `now` in Unix ms, JSON times in Unix s): `timer.js` `formatDuration`, `formatTimer(server, now)` → `{text, kind}`; `filters.js` `isFull`, `isEmpty`, `filterServers(servers, {type, regions, showFull, showEmpty})` (empty regions = all); `sort.js` `sortServers(servers, {column, dir})`, `sortColumns`, `freshStartsOrder`; `stale.js` `isStale(data, now)`; `clock.js` `clockOffset(dateHeader, localNow)`; `refresh.js` `freshDelay`, `backoffDelay`, `createRefresher({url, fetch, now, setTimeout, clearTimeout, random, onData, onError})` → `{start, stop, data}`.
 - Page structure and live behavior (SPEC §11): PLAN 1.11–1.12. Styling and assets copied from `design/`: PLAN 2.6–2.8.
 
 ## Tests and fixtures
 
 - `internal/web/web_test.go`: `httptest` against `Site` (`newSite` helper: temp data dir + fake clock). `internal/config/config_test.go`: precedence and validation tables, files in `t.TempDir()`. `internal/tracker/tracker_test.go`: per-rule tier, apply and published tables (`srv`/`snap` helpers). `internal/publish/publish_test.go`: schema, state, stale and atomic-write tables against a real tracker. `internal/scheduler/*_test.go`: `driveWaits` (fake-clock limiter driver), `newPoller`/`snap` helpers; `scheduler_test.go` `harness` (event log of requests + publishes, `run` steps the clock via `BlockUntil`+`Next`, `cycles()`, `checkPolite` politeness asserts). `internal/source/source_test.go`, `internal/clock/clock_test.go`: table-driven type/helper tests.
-- `web-tests/`: one table-driven `node --test` file per `js/logic` module (`timer`, `filters`, `sort`, `stale`, `clock`), importing via relative path.
+- `web-tests/`: one table-driven `node --test` file per `js/logic` module (`timer`, `filters`, `sort`, `stale`, `clock`, `refresh`), importing via relative path.
 - `testdata/wardogservers/`: recorded upstream fixtures for `httptest.Server`; empty until PLAN 2.1.
 - Fake clock `clock.NewFake` and fake Source `fake.New(clk)`: use these in scheduler/tracker tests; assert politeness on `Calls()`. No test touches the network.
 - `fake.NewWorld(clk, seed)`: realistic multi-hundred-server data (rotations, player drops, not-started → exact) for scenario or publish tests that need volume.
