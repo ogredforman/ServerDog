@@ -274,8 +274,8 @@ type Server struct {
     Type                         ServerType // Official | Community
     Players, MaxPlayers          int
     PasswordProtected            bool
-    Map                          struct{ Variant, Base string }
-    Mode                         struct{ Experience, GameMode string; Modifiers []string }
+    Map                          Map  // {Variant, Base string}
+    Mode                         Mode // {Experience, GameMode string; Modifiers []string}
     Rulesets                     []string
     ObservedAt                   time.Time
     MatchStart                   *MatchStart // nil unless the provider's list carries it

@@ -36,7 +36,7 @@ to the Parked section at the bottom.
   - test: `go test ./...` and `node --test "web-tests/**/*.test.js"`
   - lint: `go vet ./...` and `gofmt -l .` (must print nothing)
 - [x] **0.2** Add the GitHub Actions workflow (`.github/workflows/ci.yml`). On push and PR it runs `gofmt -l .` (fails on output), `go vet ./...`, `go test ./...` and `node --test "web-tests/**/*.test.js"` on ubuntu-latest, using the Go version from `go.mod` and Node LTS (SPEC §12).
-- [ ] **0.3** Declare the provider-neutral types and interfaces in `internal/source`: `Source`, `Snapshot`, `Server`, `ServerType`, `MatchStart`, `MatchStartState`, `ErrNotModified`, `RetryAfterError`. Declare the `Clock` interface plus a real implementation in `internal/clock`. Include doc comments carrying the SPEC rules, and small tests for any helpers (e.g. `ServerType` string mapping) (SPEC §6.1, §10.3).
+- [x] **0.3** Declare the provider-neutral types and interfaces in `internal/source`: `Source`, `Snapshot`, `Server`, `ServerType`, `MatchStart`, `MatchStartState`, `ErrNotModified`, `RetryAfterError`. Declare the `Clock` interface plus a real implementation in `internal/clock`. Include doc comments carrying the SPEC rules, and small tests for any helpers (e.g. `ServerType` string mapping) (SPEC §6.1, §10.3).
 - [ ] **0.4** Start `docs/CODEMAP.md` from the devflow template, describing the packages, the wiring in `cmd/serverdog`, and where each SPEC area will live.
 
 **Exit criteria:**
