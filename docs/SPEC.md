@@ -148,7 +148,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 **Published data** (`/data/servers.json`)
 - [P] Top level: `v` (schema version, 1), `generatedAt`, `nextUpdateAt`, `snapshotAt` (provider `FetchedAt`), `refreshSeconds`, `stale`, `complete`, `regions` (sorted IDs present), `servers`.
 - [P] Per server (short keys): `id` (join code or empty), `t` (`o`/`c`), `r` (region), `n` (display name), `p`, `mp` (players, max), `pw` (password), `map` (variant), `base` (map base), `exp` (experience), `rs` (rulesets), `ms` (start, Unix seconds, or null), `st` (`exact` / `estimate` / `starting` / `unknown`).
-- [P] Times are Unix seconds (integers). Servers with 0 players are included with `st: "unknown"`.
+- [P] Times are Unix seconds (integers). Servers with 0 players are included with `st: "unknown"`. `ms` is the confirmed start for `exact`, `ChangeObservedAt` for `estimate` and `starting`, and null for `unknown`. `nextUpdateAt` is `snapshotAt + refreshSeconds + PollDelay`, or 15s after `generatedAt` if that has passed.
 - [M] Gzip-compressed size under 100 KB at ~4,000 servers.
 
 **HTTP serving**
