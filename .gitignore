@@ -1,0 +1,40 @@
+# --- Build output ---
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+
+# --- Frontend (if any) ---
+node_modules/
+
+# --- Local data and config (never commit personal data or secrets) ---
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+/data/
+serverdog.json
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# --- Claude Code personal files and worktrees ---
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/worktrees/
+
+# --- Editors / OS ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Scratch ---
+/tmp/
