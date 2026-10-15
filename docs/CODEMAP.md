@@ -19,8 +19,7 @@ Signatures here are summaries; `go doc ./internal/<pkg>` (or `go doc ./internal/
 
 ## Wiring
 
-Today `cmd/serverdog/main.go` does: signal context (SIGINT/SIGTERM) → `http.Server` on `:8080` with `web.Handler()` → graceful `Shutdown` (10s).
-Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog` is the only non-`source` importer of a provider) → tracker → scheduler → publish → web.
+`cmd/serverdog/main.go`: `config.Load` → `newSource` (`fake.NewWorld(clock.Real{}, 1)`; `wardogservers` exits with an error until PLAN 2.1; `cmd/serverdog` is the only non-`source` importer of a provider) → `tracker.New` → `scheduler.New` (Publish = `publish.Write` then `site.Published`) → `http.Server` on `cfg.Listen` with `web.New`. SIGINT/SIGTERM: cancel and await the scheduler, then `Shutdown` (10s).
 
 ## Packages
 
@@ -32,7 +31,7 @@ Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog`
 - **tracker** (`internal/tracker`, SPEC §7.2–7.3): clockless per-join-code state machine (callers pass times). Key: `New(Options)`, `Observe(snap)`, `Queue() []Due` (P0, P1, P2, P3 by oldest `CheckedAt`), `Apply(id, ms, checkedAt)`, `Published(id, now)` (exact/estimate/starting/unknown), `Get`. Set `ChangeObservedAt` = unconfirmed estimate. Cache file in PLAN 2.3.
 - **scheduler** (`internal/scheduler`, SPEC §7.1): `New(src, clk, trk, Options) (*Scheduler, error)` + `Run(ctx)`: poll → `Observe` → P0/P1 burst within budget → `Options.Publish` → sweep until next poll due; stale republish once at `publish.StaleAt`+1s. `NewLimiter(clk, perSec)` one shared upstream limiter (`Wait`, `WaitBefore(deadline)` for the sweep, `SetRate` burst/sweep, `PauseUntil` for Retry-After); `NewPoller(src, clk, lim, pollDelay)` single-step snapshot poll (`Due`, `Wait`, `Poll`: FetchedAt+RefreshEvery+PollDelay, 304 → 15s, errors 15s→5 min).
 - **publish** (`internal/publish`, SPEC §7.4, §8 Published data): clockless. Key: `Build(snap, starts, now, pollDelay) File` (`Starts` = `*tracker.Tracker`), `NextUpdateAt`, `Stale`/`StaleAt`, `Write(ctx, dir, f)` atomic temp + rename to `servers.json`.
-- **web** (`internal/web`, SPEC §8 HTTP serving): embedded static files and `/data/servers.json` with `Cache-Control`. Key: `Handler() http.Handler`. Data serving arrives in PLAN 1.8.
+- **web** (`internal/web`, SPEC §8 HTTP serving): embedded static files and `/data/servers.json` with `Cache-Control`. Key: `New(clk, dataDir) *Site` (http.Handler), `(*Site).Published(publish.File)` records nextUpdateAt/refreshSeconds; servers.json is 404 until the first publish.
 
 ## Frontend
 
@@ -42,7 +41,7 @@ Target (PLAN 1.8): config → Source (`fake` or `wardogservers`; `cmd/serverdog`
 
 ## Tests and fixtures
 
-- `internal/web/web_test.go`: `httptest` against `Handler()`. `internal/config/config_test.go`: precedence and validation tables, files in `t.TempDir()`. `internal/tracker/tracker_test.go`: per-rule tier, apply and published tables (`srv`/`snap` helpers). `internal/publish/publish_test.go`: schema, state, stale and atomic-write tables against a real tracker. `internal/scheduler/*_test.go`: `driveWaits` (fake-clock limiter driver), `newPoller`/`snap` helpers; `scheduler_test.go` `harness` (event log of requests + publishes, `run` steps the clock via `BlockUntil`+`Next`, `cycles()`, `checkPolite` politeness asserts). `internal/source/source_test.go`, `internal/clock/clock_test.go`: table-driven type/helper tests.
+- `internal/web/web_test.go`: `httptest` against `Site` (`newSite` helper: temp data dir + fake clock). `internal/config/config_test.go`: precedence and validation tables, files in `t.TempDir()`. `internal/tracker/tracker_test.go`: per-rule tier, apply and published tables (`srv`/`snap` helpers). `internal/publish/publish_test.go`: schema, state, stale and atomic-write tables against a real tracker. `internal/scheduler/*_test.go`: `driveWaits` (fake-clock limiter driver), `newPoller`/`snap` helpers; `scheduler_test.go` `harness` (event log of requests + publishes, `run` steps the clock via `BlockUntil`+`Next`, `cycles()`, `checkPolite` politeness asserts). `internal/source/source_test.go`, `internal/clock/clock_test.go`: table-driven type/helper tests.
 - `web-tests/`: `node --test` files for `js/logic`; `smoke.test.js` is a placeholder.
 - `testdata/wardogservers/`: recorded upstream fixtures for `httptest.Server`; empty until PLAN 2.1.
 - Fake clock `clock.NewFake` and fake Source `fake.New(clk)`: use these in scheduler/tracker tests; assert politeness on `Calls()`. No test touches the network.

@@ -79,7 +79,7 @@ and unpredictability.
   - the stale flag appears after an outage.
 
   (SPEC §7.1, §7.2, §9 Upstream load, §12)
-- [ ] **1.8** Serve the published data and wire `cmd/serverdog`. `internal/web` serves embedded static files and `/data/servers.json` from `data_dir`, with `Cache-Control: public, max-age=N, s-maxage=N` where N is seconds until `nextUpdateAt` (kept between 5 and `RefreshEvery`). `main.go` builds config → Source (`fake` only for now) → tracker → scheduler → publisher → HTTP, and shuts down cleanly on SIGINT/SIGTERM. Handler tests check headers and the 404 before the first publish (SPEC §7.4, §8 HTTP serving, §10).
+- [x] **1.8** Serve the published data and wire `cmd/serverdog`. `internal/web` serves embedded static files and `/data/servers.json` from `data_dir`, with `Cache-Control: public, max-age=N, s-maxage=N` where N is seconds until `nextUpdateAt` (kept between 5 and `RefreshEvery`). `main.go` builds config → Source (`fake` only for now) → tracker → scheduler → publisher → HTTP, and shuts down cleanly on SIGINT/SIGTERM. Handler tests check headers and the 404 before the first publish (SPEC §7.4, §8 HTTP serving, §10).
 
 ### Frontend
 
