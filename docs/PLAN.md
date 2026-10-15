@@ -83,7 +83,7 @@ and unpredictability.
 
 ### Frontend
 
-- [ ] **1.9** Write the pure frontend logic modules in `internal/web/static/js/logic/`:
+- [x] **1.9** Write the pure frontend logic modules in `internal/web/static/js/logic/`:
   - timer formatting (`m:ss`, `h:mm:ss`, `~` estimate, STARTING, `—`);
   - type/region filters;
   - Show Full (incl. 0/0) and Show Empty rules;
