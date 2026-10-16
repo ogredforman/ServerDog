@@ -186,7 +186,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 - **Freshness:** a new match seen in snapshot S appears in `servers.json` within 90s of S's `FetchedAt` (burst at defaults, healthy upstream).
 - **Origin load:** with Cloudflare caching working, the origin sees about one `servers.json` request per Cloudflare location per cycle, regardless of visitor count.
 - **Footprint:** runs in under 64 MB RSS on a 1 vCPU / 512 MB droplet. Single static binary, no runtime dependencies.
-- **Page weight:** first load under 150 KB transferred. No third-party requests.
+- **Page weight:** first load of the static page (HTML, CSS, JS, fonts) under 150 KB transferred; `servers.json` has its own budget (§8 Published data). No third-party requests.
 - **Resilience:** an upstream outage never empties the site. The last published data stays, marked stale. A crash or restart loses at most one cycle of tracker state.
 - **Client performance:** the 1s timer update and a full re-sort of 4,000 rows each finish in under 16 ms on a mid-range laptop. Only visible timer cells are touched each second.
 - **Privacy:** no cookies, analytics or user data sent anywhere. localStorage only.

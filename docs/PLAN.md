@@ -169,7 +169,7 @@ and unpredictability.
   - `source.Map.Name` / `source.Mode.Name` display fields, filled by the wardogservers adapter (Madrid → Ozeti, Detroit → Zestafona, Bakurani → Bakurani, verified in-game; mode from the experience → KOTH); raw `Variant`/`Experience` stay for the tracker;
   - `fake.NewWorld` uses the three real maps, KOTH and real experience/modifier/ruleset strings;
   - `servers.json` v2: `map` and `mode` hold display names; `base` and `exp` dropped (SPEC §6.1, §8 Data provider, Published data, §10.3).
-- [ ] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Make the selected row's copy-join-code button work, with "Copied" feedback. Confirm the first load is under 150 KB, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
+- [x] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Make the selected row's copy-join-code button work, with "Copied" feedback. Confirm the first load is under 150 KB, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
 
 ### Deploy and go live
 

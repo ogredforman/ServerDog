@@ -4,6 +4,7 @@
 import { clockOffset } from './logic/clock.js';
 import { loadPrefs, savePrefs, hasSavedPrefs, nextSort } from './logic/prefs.js';
 import { createRefresher } from './logic/refresh.js';
+import { copyWithFeedback, COPY_LABELS } from './logic/copy.js';
 import { selectorRegions, chosenRegions, guessRegion } from './logic/regions.js';
 import { formatTimer } from './logic/timer.js';
 import { viewServers, rowCells, sortIndicator, activeFilters, staleNotice } from './logic/view.js';
@@ -103,7 +104,7 @@ function renderRow(server, t) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'join-btn';
-    btn.textContent = 'Copy join code';
+    btn.textContent = COPY_LABELS.idle;
     btn.setAttribute('aria-label', `Copy join code for ${server.n}`);
     join.append(btn);
     tr.dataset.id = server.id;
@@ -121,6 +122,38 @@ function renderRow(server, t) {
   );
   if (server.id && server.id === selectedId) select(tr);
   return tr;
+}
+
+// copyCode copies btn's row join code and shows "Copied" (or "Copy failed") on the button for a
+// moment. A data refresh rebuilds the rows, which just ends the feedback early.
+async function copyCode(btn) {
+  btn.idleLabel ??= btn.getAttribute('aria-label');
+  btn.resetTimer = await copyWithFeedback(btn.closest('tr').dataset.id, {
+    write: writeClipboard,
+    show: (state) => {
+      btn.textContent = COPY_LABELS[state];
+      btn.classList.toggle('copied', state !== 'idle');
+      btn.setAttribute('aria-label', state === 'idle' ? btn.idleLabel : COPY_LABELS[state]);
+    },
+    setTimeout,
+    clearTimeout,
+    timer: btn.resetTimer,
+  });
+}
+
+// writeClipboard uses the Clipboard API, which only exists in secure contexts (HTTPS, localhost);
+// elsewhere (plain HTTP on a LAN) it falls back to a hidden textarea and execCommand.
+async function writeClipboard(text) {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.append(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  if (!ok) throw new Error('copy failed');
 }
 
 // select marks tr as the selected (gold) row; a null tr just clears the current selection.
@@ -216,8 +249,13 @@ function bind() {
   }
 
   // Clicking a row selects it (no re-render); clicking the selected row again clears it.
+  // The gold button copies its row's join code instead.
   $('#server-list tbody').addEventListener('click', (e) => {
-    if (e.target.closest('.join-btn')) return;
+    const btn = e.target.closest('.join-btn');
+    if (btn) {
+      copyCode(btn);
+      return;
+    }
     const tr = e.target.closest('tr[data-id]');
     if (!tr) return;
     select(tr.dataset.id === selectedId ? null : tr);

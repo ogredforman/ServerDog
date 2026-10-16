@@ -1,8 +1,11 @@
 package web
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -212,4 +215,107 @@ func TestHealthz(t *testing.T) {
 			}
 		})
 	}
+}
+
+// servedIndex returns the index.html that s serves.
+func servedIndex(t *testing.T, s *Site) string {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /: status %d", rec.Code)
+	}
+	return rec.Body.String()
+}
+
+// disclaimer is the non-affiliation text required in the navbar and the footer (SPEC §5, §8).
+const disclaimer = "Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs."
+
+func TestDisclaimerInNavbarAndFooter(t *testing.T) {
+	s, _ := newSite(t, `{}`)
+	index := servedIndex(t, s)
+	for _, part := range []struct{ open, close string }{
+		{`<header id="navbar">`, `</header>`},
+		{`<footer>`, `</footer>`},
+	} {
+		_, rest, ok := strings.Cut(index, part.open)
+		section, _, ok2 := strings.Cut(rest, part.close)
+		if !ok || !ok2 {
+			t.Errorf("index.html has no %s…%s", part.open, part.close)
+			continue
+		}
+		if !strings.Contains(section, disclaimer) {
+			t.Errorf("%s does not contain the disclaimer", part.open)
+		}
+	}
+	if !strings.Contains(index, "api.wardogservers.com") {
+		t.Error("footer does not credit the data source")
+	}
+}
+
+// thirdPartyRef matches an absolute or protocol-relative URL the browser would load (SPEC §9 Privacy).
+var thirdPartyRef = regexp.MustCompile(`(?:src|href)\s*=\s*["']?(?:https?:)?//|url\(\s*["']?(?:https?:)?//|(?:from|import|fetch)\s*\(?\s*["'` + "`" + `](?:https?:)?//`)
+
+func TestNoThirdPartyRequests(t *testing.T) {
+	s, _ := newSite(t, `{}`)
+	files := map[string]string{"/": servedIndex(t, s)}
+	err := fs.WalkDir(static, "static", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !(strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".css")) {
+			return err
+		}
+		b, err := fs.ReadFile(static, path)
+		files[path] = string(b)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range files {
+		if m := thirdPartyRef.FindString(body); m != "" {
+			t.Errorf("%s loads from another host: %q", name, m)
+		}
+	}
+}
+
+// maxFirstLoadBytes is the first-load budget for the static page, gzipped as Cloudflare serves it
+// (SPEC §9 Page weight). servers.json has its own budget (size_test.go in publish).
+const maxFirstLoadBytes = 150 * 1024
+
+func TestFirstLoadWeight(t *testing.T) {
+	s, _ := newSite(t, `{}`)
+	index := servedIndex(t, s)
+	total := gzipLen(t, []byte(index))
+	seen := map[string]bool{} // fonts and app.js appear twice (preload, import map)
+	for _, m := range assetRef.FindAllStringSubmatch(index, -1) {
+		if seen[m[1]] {
+			continue
+		}
+		seen[m[1]] = true
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, m[0], nil))
+		body := rec.Body.Bytes()
+		// woff2 is already compressed and is sent as is.
+		if strings.HasSuffix(m[1], ".woff2") {
+			total += len(body)
+		} else {
+			total += gzipLen(t, body)
+		}
+	}
+	t.Logf("first load: %d bytes gzipped", total)
+	if total > maxFirstLoadBytes {
+		t.Errorf("first load is %d bytes gzipped, budget %d", total, maxFirstLoadBytes)
+	}
+}
+
+func gzipLen(t *testing.T, b []byte) int {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	if _, err := zw.Write(b); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Len()
 }
