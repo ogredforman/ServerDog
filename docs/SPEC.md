@@ -23,7 +23,7 @@ A single Go binary polls a server-list data provider (today: api.wardogservers.c
 
 1. A player picks a server type (official / community) and region(s) and sees every matching server with name, players, map/mode and a match timer that ticks every second.
 2. **Find Fresh Starts** sorts the current list: STARTING first, then newest exact start, then estimates, then unknown. Nothing is hidden.
-3. The page looks as close to the in-game Wardogs server browser as possible (layout, colors, fonts, map thumbnails), modeled on screenshots in `design/screenshots/`. The only intended differences are the match timer and the STARTING state.
+3. The page looks as close to the in-game Wardogs server browser as possible (layout, colors, fonts), modeled on screenshots in `design/screenshots/` and the review notes in `design/screenshots/NOTES.md`. The intended differences are the match timer and the STARTING state, plus dropping in-game controls the site can't support (§11).
 4. Column sorting and the **Show Full** / **Show Empty** toggles behave like the game's.
 5. Data refreshes in step with the provider's snapshot cycle (180s today), end to end. The origin's request rate doesn't depend on visitor count.
 6. Navbar and footer both say clearly that the site is not affiliated with or endorsed by Bulkhead or Wardogs.
@@ -165,7 +165,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 - [P] Match timer ticks every second, formatted `m:ss` below 1 hour and `h:mm:ss` above. STARTING shows a "STARTING" label, estimates show `~m:ss` in a muted style, unknown shows `—`.
 - [P] Find Fresh Starts button. Order: starting (newest `ms` first) → exact (newest first) → estimate (newest first) → unknown (players descending). Ties broken by players descending, then name.
 - [P] Refresh scheduling and stale notice as in §7.5.
-- [M] Visual match to the in-game browser from `design/screenshots/`: layout, colors, fonts, map thumbnails, region display names, hover/selected states. The Find Fresh Starts button uses the game's yellow accent.
+- [M] Visual match to the in-game browser from `design/screenshots/`: layout, colors, fonts, region display names, hover/selected states. No map images (none are available, and the game's artwork isn't ours to copy). The Find Fresh Starts button uses the game's yellow accent.
 - [M] Disclaimer in navbar and footer: "Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs."
 - [M] Copy-join-code control per row, with brief "Copied" feedback.
 - [L] Search box (name / map) if the in-game browser has one.
@@ -186,7 +186,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 - **Freshness:** a new match seen in snapshot S appears in `servers.json` within 90s of S's `FetchedAt` (burst at defaults, healthy upstream).
 - **Origin load:** with Cloudflare caching working, the origin sees about one `servers.json` request per Cloudflare location per cycle, regardless of visitor count.
 - **Footprint:** runs in under 64 MB RSS on a 1 vCPU / 512 MB droplet. Single static binary, no runtime dependencies.
-- **Page weight:** first load (excluding map thumbnails) under 150 KB transferred. No third-party requests.
+- **Page weight:** first load under 150 KB transferred. No third-party requests.
 - **Resilience:** an upstream outage never empties the site. The last published data stays, marked stale. A crash or restart loses at most one cycle of tracker state.
 - **Client performance:** the 1s timer update and a full re-sort of 4,000 rows each finish in under 16 ms on a mid-range laptop. Only visible timer cells are touched each second.
 - **Privacy:** no cookies, analytics or user data sent anywhere. localStorage only.
@@ -233,7 +233,7 @@ internal/tracker/                per-server state, tier classification, cache fi
 internal/scheduler/              poll cycle, burst/sweep, rate limiting, backoff
 internal/publish/                servers.json model + atomic writer
 internal/web/                    HTTP handlers, cache headers, asset versioning
-internal/web/static/             index.html, css/, js/, js/logic/, fonts/, maps/
+internal/web/static/             index.html, css/, js/, js/logic/, fonts/
 web-tests/                       node --test files for js/logic
 testdata/wardogservers/          recorded upstream fixtures (snapshot, detail)
 design/screenshots/              in-game UI reference shots + README
@@ -307,13 +307,14 @@ type Clock interface {
 
 ## 11. UI surfaces
 
-One page, at `/`. Exact visuals come from `design/screenshots/`. Until those land, the prototype uses plain, unstyled markup with the same structure.
+One page, at `/`. Visuals come from `design/screenshots/`; per-screenshot details, colors and owner decisions are in `design/screenshots/NOTES.md`. No game artwork (logo, photos, map images) is used.
 
-- **Navbar:** ServerDog name, the non-affiliation disclaimer (always visible, not collapsed), stale-data notice when relevant.
-- **Type picker:** official / community, chosen on entry like in-game. Can be changed later (exact flow from screenshots).
-- **Controls row:** region selection (multi), Show Full toggle, Show Empty toggle, and the yellow **Find Fresh Starts** button (shown active while Fresh Starts sorting is on).
-- **Server list:** sortable column headers, one row per server with name, players/max, map (thumbnail at [M]), mode/rulesets, password indicator, match timer, copy-join-code control ([M]). Scrolls through all results; no pagination unless the in-game UI has it.
-- **Empty state:** shown when filters hide everything, with which filters are active.
+- **Navbar:** like the in-game top bar: back button (returns to the type picker), small grey `// SERVER BROWSER` above the type as the title. Where the game shows account stats: ServerDog name, the non-affiliation disclaimer (always visible, not collapsed), stale-data notice when relevant.
+- **Type picker:** two cards, Official and Community, in the layout of the older in-game picker (`02-type-picker-old.jpg`), with our own simple icons. Infantry-only, hardcore and level-capped servers are community servers and appear under Community. The choice is saved; a returning visitor goes straight to the saved browser, and the back button returns to the picker.
+- **Controls row:** Show Full and Show Empty toggles (independent; on = amber style), and the yellow **Find Fresh Starts** button (shown active while Fresh Starts sorting is on). The game's Refresh, Filter and Join By ID buttons are dropped.
+- **Region selector:** a `REGION [n]` button opens a modal listing regions in game order with the game's display names (unknown IDs fall back to the raw ID). Checkboxes apply immediately; there is no Confirm and no limit on how many are selected (the game caps at 3). Ping and "pick best region" are dropped. On a first visit with nothing saved, the region nearest the visitor is preselected if it can be inferred locally (e.g. from the browser's time zone, no permission prompt or request); otherwise none is selected, which shows all regions.
+- **Server list:** column headers padlock (password), official check, Server Name, Mode, Map, Players, and Timer in the slot where the game shows Ping. Headers show `▶` when unsorted and `▲` (descending) / `▼` (ascending) on the sorted column, which also gets a lighter header cell. Rows show the name with ruleset chips under it, players/max, map name (text, no image), mode, password indicator and match timer. Rows have hover (lighter, grey border) and selected (gold) states. The selected row gets a gold copy-join-code button styled like the game's Join Match button ([M]). The game's right-hand detail panel is dropped. Scrolls through all results; no pagination.
+- **Empty state:** the empty table frame (as in-game), plus a short message naming the active filters (the game shows no message).
 - **Footer:** disclaimer repeated, data source credit (api.wardogservers.com), contact.
 
 UX rules:
@@ -346,9 +347,8 @@ UX rules:
 
 ## 13. Open questions
 
-- **In-game visuals:** layout, colors, columns, region display names, type-picker flow, states. Blocks [M] styling. Answered by screenshots in `design/screenshots/`.
-- **Fonts:** can the game font be obtained and self-hosted? Blocks final typography. Fallback: closest free font.
-- **Map thumbnails:** user will supply them. Blocks the [M] thumbnail column. Assumption: images keyed by `map` variant, with a neutral placeholder for unknown variants.
+- **Fonts:** the game font files aren't available. Decision: self-host Barlow (SIL OFL), which the in-game text closely resembles; confirm side by side in PLAN 2.6.
+- **Unseen row variants:** no screenshot shows a password-protected, hardcore or infantry-only row. Assumption: a padlock icon in the padlock column, and extra ruleset chips like the `standard` chip.
 - **Provider adding match start to the bulk list:** the API owner is looking into it. Not blocking; handled by `Server.MatchStart` (§10.3, §7.2 step 8).
 - **Tuning defaults** (`drop_pct` 30, `drop_min` 25, `starting_window` 20m, rates/budgets): assumed from a 30-server sample. Revisit after a day of live running.
 - **Clock skew source:** assumed the Cloudflare edge `Date` header is accurate enough (1s resolution) to correct client clocks. Revisit if timers visibly disagree between devices.

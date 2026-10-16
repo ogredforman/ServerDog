@@ -21,7 +21,7 @@ to the Parked section at the bottom.
 - **Provider-agnostic:** all wardogservers.com specifics live behind the `Source` interface, so the provider can be swapped.
 - **Sync end to end:** the poller, published `nextUpdateAt`, `s-maxage`, and the client's next fetch all follow the provider's cycle.
 - **Stack:** Go (standard library only), vanilla HTML/CSS/ES modules, `node --test` for frontend logic. TLS via a Cloudflare Origin Certificate loaded by Go. Systemd on a DigitalOcean droplet. GitHub + Actions CI.
-- **Visuals** are copied from in-game screenshots in `design/screenshots/`, with map thumbnails in `design/maps/` and fonts in `design/fonts/`.
+- **Visuals** are copied from in-game screenshots in `design/screenshots/` (review notes in `design/screenshots/NOTES.md`). No game artwork or map images; the font is self-hosted Barlow.
 - **MVP guardrail:** servers.dog is live for 7 days, the owner has used Find Fresh Starts to join fresh matches, upstream requests stayed within budget, and the stale notice appeared only during upstream outages.
 
 ---
@@ -146,20 +146,19 @@ and unpredictability.
   Handler tests for every header (SPEC §8 HTTP serving, §5 Flat origin load).
 - [x] **2.5** Add HTTPS: serve TLS on `listen` when `tls_cert`/`tls_key` are set, plain HTTP otherwise. Test with a generated self-signed cert. Add a publisher test that gzip size stays under 100 KB at 4,000 generated servers (SPEC §8 HTTP serving, §8 Published data).
 
-### In-game look (uses `design/screenshots/`, `design/maps/`, `design/fonts/`)
+### In-game look (uses `design/screenshots/` and `NOTES.md`)
 
-- [ ] **2.5b** Review the screenshots with the owner. Go through each file in `design/screenshots/` one at a time: the owner describes what it shows and how it behaves, and the agent asks about anything unclear (colors, states, interactions, region names, type-picker flow, which `02-type-picker` version is current). Record the result per screenshot in `design/screenshots/NOTES.md`. Update SPEC §11 and close the visual items in SPEC §13 from it. No code (SPEC §11, §13).
-- [ ] **2.6** Style the page layout from the screenshots and `design/screenshots/NOTES.md`: overall frame, colors, typography (game font if supplied, else the closest free self-hosted font), navbar, type picker, region selector with in-game display names (fallback to ID), toggles, column headers and sort indicators. Copy assets from `design/` into `internal/web/static/` (SPEC §11, §8 Browser UI, §5 Copy the game).
+- [x] **2.5b** Review the screenshots with the owner. Go through each file in `design/screenshots/` one at a time: the owner describes what it shows and how it behaves, and the agent asks about anything unclear (colors, states, interactions, region names, type-picker flow, which `02-type-picker` version is current). Record the result per screenshot in `design/screenshots/NOTES.md`. Update SPEC §11 and close the visual items in SPEC §13 from it. No code (SPEC §11, §13).
+- [ ] **2.6** Style the page layout from the screenshots and `design/screenshots/NOTES.md`: overall frame, colors, typography (self-hosted Barlow with its OFL license in `internal/web/static/fonts/`), navbar, type picker, region selector modal with in-game display names (fallback to ID) and first-visit region guess, toggles, column headers and sort indicators (SPEC §11, §8 Browser UI, §5 Copy the game).
 - [ ] **2.7** Style the rows and states from the screenshots and NOTES.md:
-  - map thumbnails keyed by variant, with a neutral placeholder;
   - full / empty / password / ruleset looks;
-  - hover / selected;
+  - hover / selected, with the gold copy-join-code button on the selected row;
   - timer, STARTING and muted `~` estimate styling;
   - the yellow Find Fresh Starts button;
   - the empty-state message naming active filters.
 
   Check the 16 ms budget for the 1s tick and a 4,000-row re-sort (SPEC §8 Browser UI, §9 Client performance, §11).
-- [ ] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Add a per-row copy-join-code control with "Copied" feedback. Confirm the first load is under 150 KB excluding thumbnails, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
+- [ ] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Make the selected row's copy-join-code button work, with "Copied" feedback. Confirm the first load is under 150 KB, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
 
 ### Deploy and go live
 
@@ -221,3 +220,4 @@ not from this list. Candidates:
 Ideas and tangents captured mid-work (via `/devflow:park`). Not scheduled. Review them at the start of each stage.
 
 - **[M] Versioned static assets** (from PLAN 1.11): `/js/*` is served unversioned with the index policy (`public, max-age=60, s-maxage=300`). At [M], fill `?v=<content hash>` into `index.html` at startup and serve versioned assets `public, max-age=31536000, immutable` (SPEC §8 HTTP serving).
+- **[L] Join Match link** (from PLAN 2.5b): if Wardogs or Steam turns out to accept a join code through a launch link (`steam://…` or a game URL scheme), make the selected row's gold button join the match directly instead of copying the code (SPEC §11).

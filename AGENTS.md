@@ -11,7 +11,7 @@ HTML/CSS/vanilla-JS page. Cloudflare caches everything in front of a single drop
 - Build order and task list: `docs/PLAN.md` (source of truth for *what to do now*)
 - Decisions: `docs/adr/`
 - Where the code lives, key signatures, test fixtures: `docs/CODEMAP.md` (from Stage 0 onward)
-- In-game UI references: `design/screenshots/`, map thumbnails `design/maps/`, fonts `design/fonts/`
+- In-game UI references: `design/screenshots/` and the owner's review notes in `design/screenshots/NOTES.md`
 
 ## Before any task
 
