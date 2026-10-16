@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { viewServers, rowCells, sortIndicator, activeFilters, staleNotice } from '../internal/web/static/js/logic/view.js';
+import { viewServers, rowCells, serverName, sortIndicator, activeFilters, staleNotice } from '../internal/web/static/js/logic/view.js';
 import { DEFAULT_PREFS } from '../internal/web/static/js/logic/prefs.js';
 
 const servers = [
@@ -57,6 +57,22 @@ test('rowCells', () => {
   ];
   for (const c of cases) {
     assert.deepEqual(rowCells(c.server, now), c.want, c.name);
+  }
+});
+
+test('serverName adds the region as in-game', () => {
+  const cases = [
+    { name: 'official, in-game form', server: { n: 'Official #97', t: 'o', r: 'na-east' }, want: 'OFFICIAL WARDOGS | North America (East) | #97' },
+    { name: 'community appends region', server: { n: '[ZTAX] KOTH', t: 'c', r: 'eu-central' }, want: '[ZTAX] KOTH | Europe (Central)' },
+    { name: 'official with an unusual name appends', server: { n: 'Official Event', t: 'o', r: 'oceania' }, want: 'Official Event | Oceania' },
+    { name: 'community named like an official server is not rewritten', server: { n: 'Official #1', t: 'c', r: 'na-west' }, want: 'Official #1 | North America (West)' },
+    { name: 'unknown region uses its ID', server: { n: 'X', t: 'c', r: 'mars' }, want: 'X | mars' },
+    { name: 'no region, name unchanged', server: { n: 'Dogs', t: 'o' }, want: 'Dogs' },
+    { name: 'no name falls back to join code', server: { id: 'ABC', t: 'c', r: 'oceania' }, want: 'ABC | Oceania' },
+    { name: 'nothing but a region', server: { t: 'c', r: 'oceania' }, want: 'Oceania' },
+  ];
+  for (const c of cases) {
+    assert.equal(serverName(c.server), c.want, c.name);
   }
 });
 

@@ -30,13 +30,26 @@ export function rowCells(server, now) {
     empty: isEmpty(server),
     password: Boolean(server.pw),
     official: server.t === 'o',
-    name: server.n || server.id || '',
+    name: serverName(server),
     rulesets: [...(server.rs || [])],
     mode: server.mode || '',
     map: server.map || '',
     players: `${server.p}/${server.mp}`,
     timer: formatTimer(server, now),
   };
+}
+
+// serverName is a row's name with its region, as in-game, so rows from several regions can be
+// told apart. Official servers (the provider sends `Official #97`) read like the game's
+// `OFFICIAL WARDOGS | North America (East) | #97`; other names get ` | <region>` appended.
+// Without a region the name is unchanged; without a name the join code stands in.
+export function serverName(server) {
+  const name = server.n || server.id || '';
+  if (!server.r) return name;
+  const region = regionName(server.r);
+  const official = server.t === 'o' && /^official #(\d+)$/i.exec(name);
+  if (official) return `OFFICIAL WARDOGS | ${region} | #${official[1]}`;
+  return name ? `${name} | ${region}` : region;
 }
 
 // sortIndicator is a header's arrow, as in-game: ▶ unsorted, ▲ descending, ▼ ascending.

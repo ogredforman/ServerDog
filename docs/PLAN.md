@@ -171,6 +171,8 @@ and unpredictability.
   - `servers.json` v2: `map` and `mode` hold display names; `base` and `exp` dropped (SPEC §6.1, §8 Data provider, Published data, §10.3).
 - [x] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Make the selected row's copy-join-code button work, with "Copied" feedback. Confirm the first load is under 150 KB, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
 
+- [x] **2.8b** Show each server's region in its row name, as in-game, so rows from several selected regions can be told apart: official `Official #97` → `OFFICIAL WARDOGS | North America (East) | #97`, other names `<name> | <region>`; sorting by name is unchanged (SPEC §11).
+
 ### Deploy and go live
 
 - [x] **2.9** Write `deploy/`:
