@@ -1,5 +1,5 @@
 # ServerDog systemd unit. Install to /etc/systemd/system/serverdog.service (see DEPLOY.md).
-# The binary listens on 127.0.0.1:8080 (plain HTTP); Apache terminates TLS and proxies to it.
+# The binary listens on 127.0.0.1:8080 (plain HTTP); nginx terminates TLS and proxies to it.
 [Unit]
 Description=ServerDog (servers.dog)
 After=network-online.target

@@ -155,7 +155,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 **HTTP serving**
 - [P] Serve `/`, static assets, and `/data/servers.json` from the binary (assets built in via `go:embed`).
 - [M] Caching headers: `servers.json` as in §7.4. `index.html` `public, max-age=60, s-maxage=300`. Versioned assets (`?v=<content hash>`, filled into `index.html` at startup) `public, max-age=31536000, immutable`.
-- [M] HTTPS on a configurable address with configured cert/key files. Plain HTTP when no cert is set. In production Apache terminates TLS with the Cloudflare Origin Certificate and proxies to plain HTTP on loopback (ADR 0001).
+- [M] HTTPS on a configurable address with configured cert/key files. Plain HTTP when no cert is set. In production nginx terminates TLS with the Cloudflare Origin Certificate and proxies to plain HTTP on loopback (ADR 0001).
 - [M] `/healthz` returns 200 with last snapshot age. It is never cached.
 
 **Browser UI**
@@ -177,7 +177,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 - [P] Unknown keys in the config file are an error (catches typos). Invalid values fail startup with a clear message.
 
 **Deployment**
-- [M] `deploy/` holds a systemd unit (dedicated user, no privileges: it listens on `127.0.0.1:8080`), an example config file, the Apache reverse-proxy site, and a short `DEPLOY.md` plus a Cloudflare tutorial (`CLOUDFLARE.md`). The notes cover the Cloudflare Origin Certificate in Apache, SSL "Full (strict)", a Cache Rule making servers.dog eligible for cache by origin headers, Tiered Cache, turning off Cloudflare features that inject scripts, and firewalling the droplet's web ports to Cloudflare IP ranges (ADR 0001).
+- [M] `deploy/` holds a systemd unit (dedicated user, no privileges: it listens on `127.0.0.1:8080`), an example config file, the nginx reverse-proxy site, and a short `DEPLOY.md` plus a Cloudflare tutorial (`CLOUDFLARE.md`). The notes cover the Cloudflare Origin Certificate in nginx, SSL "Full (strict)", a Cache Rule making servers.dog eligible for cache by origin headers, Tiered Cache, turning off Cloudflare features that inject scripts, and firewalling the droplet's web ports to Cloudflare IP ranges (ADR 0001).
 - [M] `design/screenshots/README.md` lists the screenshots to capture.
 
 ## 9. Non-functional requirements
@@ -217,7 +217,7 @@ provider ◀──┤ source adapter ◀─ scheduler ─▶ tracker ─▶ publ
 | Frontend tests | `node --test` (Node built-in runner) | Dev-only. No npm packages. Not needed to build or deploy |
 | Config | flags > env > JSON file > defaults | JSON keeps it standard-library only |
 | Storage | `servers.json` + `tracker.json` on disk | Atomic writes via temp file + rename |
-| TLS | Cloudflare Origin Certificate in Apache, reverse-proxying to the binary on loopback | The droplet is shared with redforman.dev, so Apache owns :443 (ADR 0001). The binary's own TLS stays for other setups |
+| TLS | Cloudflare Origin Certificate in nginx, reverse-proxying to the binary on loopback | The droplet is shared with redforman.dev, so nginx owns :443 (ADR 0001). The binary's own TLS stays for other setups |
 | Hosting | DigitalOcean droplet (shared) + systemd, Cloudflare proxy at servers.dog | Cache Rule: cache by origin headers; Tiered Cache |
 
 ### 10.2 Repository layout

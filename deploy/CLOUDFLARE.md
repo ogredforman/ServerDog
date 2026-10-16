@@ -3,14 +3,14 @@
 A step-by-step tutorial for the shared droplet. When you're done:
 
 - Both domains use Cloudflare's nameservers, and their websites are proxied (orange cloud).
-- Visitors connect to Cloudflare. Cloudflare connects to Apache over HTTPS using a Cloudflare
+- Visitors connect to Cloudflare. Cloudflare connects to nginx over HTTPS using a Cloudflare
   Origin Certificate, with SSL mode "Full (strict)".
 - The droplet accepts web traffic (ports 80/443) only from Cloudflare. SSH is unchanged.
 - servers.dog is cached by Cloudflare according to ServerDog's own `Cache-Control` headers.
   redforman.dev gets Cloudflare's default caching, which caches static files and never HTML.
 
 redforman.dev needs **no changes to the portfolio app**. Everything happens in DNS, the
-Cloudflare dashboard and Apache. Its notes are in step 6.
+Cloudflare dashboard and nginx. Its notes are in step 6.
 
 Everything here works on Cloudflare's Free plan. Menu names are from the Cloudflare dashboard
 as of 2026; if one has moved, the setting name is the same.
@@ -54,7 +54,7 @@ For each of `servers.dog` and `redforman.dev`:
 Cloudflare can only issue Origin Certificates (step 4) once a domain is **Active**, so switch
 the nameservers first. Before you do, set each domain's **SSL/TLS → Overview** encryption mode to
 **Full (strict)** (step 5 explains why). Otherwise Cloudflare may start in "Flexible", which
-sends redforman.dev into a redirect loop while its Apache redirects HTTP to HTTPS.
+sends redforman.dev into a redirect loop while its nginx redirects HTTP to HTTPS.
 
 At each domain's registrar:
 
@@ -69,9 +69,9 @@ When it's Active, turn DNSSEC back on through Cloudflare: **DNS → Settings →
 then add the DS record it shows at your registrar.
 
 - **redforman.dev** keeps working throughout. Visitors reach the droplet either directly (old
-  nameservers) or through Cloudflare (new ones), both end at the same Apache, and its Let's
+  nameservers) or through Cloudflare (new ones), both end at the same nginx, and its Let's
   Encrypt certificate satisfies Full (strict).
-- **servers.dog** shows a Cloudflare error page until its Origin Certificate and Apache site are
+- **servers.dog** shows a Cloudflare error page until its Origin Certificate and nginx site are
   in place (step 4). It's a new domain with no visitors yet, so that's harmless.
 
 ## 4. Create the Origin Certificates
@@ -107,14 +107,14 @@ sudo chmod 0600 /etc/ssl/cloudflare/<domain>.key
 An Origin Certificate is trusted only by Cloudflare, not by browsers. That's fine, because
 browsers only ever talk to Cloudflare.
 
-- **servers.dog:** now install ServerDog and its Apache site (DEPLOY.md steps 1–5). They
+- **servers.dog:** now install ServerDog and its nginx site (DEPLOY.md steps 1–5). They
   already point at `/etc/ssl/cloudflare/servers.dog.pem` and `.key`.
 - **redforman.dev:** optional; see step 6. Its Let's Encrypt certificate keeps working.
 
 ## 5. SSL/TLS settings (both domains)
 
 - **SSL/TLS → Overview → Configure:** set the encryption mode to **Full (strict)**. Cloudflare
-  then connects to Apache over HTTPS and checks the origin certificate. Never use "Flexible":
+  then connects to nginx over HTTPS and checks the origin certificate. Never use "Flexible":
   it sends traffic to the droplet unencrypted.
 - **SSL/TLS → Edge Certificates:**
   - **Always Use HTTPS**: On.
@@ -131,19 +131,21 @@ certificate (which redforman.dev may still be using).
 The portfolio app doesn't need to change. Things to know:
 
 - **Certificate.** Its current Let's Encrypt certificate keeps working under Full (strict), and
-  certbot renewals still work through Cloudflare. To drop certbot, point redforman.dev's Apache
-  site at the Origin Certificate from step 4:
+  certbot renewals still work through Cloudflare. To drop certbot, point redforman.dev's nginx
+  site (in `/etc/nginx/sites-available/`) at the Origin Certificate from step 4, replacing the
+  two certificate lines certbot added (marked `# managed by Certbot`):
 
-  ```apache
-  SSLCertificateFile    /etc/ssl/cloudflare/redforman.dev.pem
-  SSLCertificateKeyFile /etc/ssl/cloudflare/redforman.dev.key
+  ```nginx
+  ssl_certificate     /etc/ssl/cloudflare/redforman.dev.pem;
+  ssl_certificate_key /etc/ssl/cloudflare/redforman.dev.key;
   ```
 
-  Remove any `Include /etc/letsencrypt/options-ssl-apache.conf` line, or keep it for its cipher
-  settings. Reload Apache, then `sudo certbot delete --cert-name redforman.dev`. Only do this
+  Also remove certbot's `include /etc/letsencrypt/options-ssl-nginx.conf;` and `ssl_dhparam`
+  lines, since deleting the certificate removes the files they point to. Run
+  `sudo nginx -t && sudo systemctl reload nginx`, then `sudo certbot delete --cert-name redforman.dev`. Only do this
   after the domain is Active on Cloudflare.
-- **Visitor IPs.** Behind Cloudflare, Apache sees Cloudflare's address for every request. Step 7
-  sets up `mod_remoteip` so Apache's logs, and the `X-Forwarded-For` it passes to a proxied
+- **Visitor IPs.** Behind Cloudflare, nginx sees Cloudflare's address for every request. Step 7
+  sets up nginx's real IP module so its logs, and the `X-Forwarded-For` it passes to a proxied
   app, carry the real visitor address. The app needs no change.
 - **Caching.** With no Cache Rule, Cloudflare caches only static file types (images, CSS, JS,
   fonts) and never HTML, so pages, forms and logins behave as before. If you redeploy the
@@ -154,7 +156,7 @@ The portfolio app doesn't need to change. Things to know:
 ## 7. Firewall: only Cloudflare reaches ports 80/443
 
 Once **both** domains are Active and proxied, nobody needs to reach the droplet's web ports
-directly. Limiting them to Cloudflare stops anyone from bypassing the cache and hitting Apache
+directly. Limiting them to Cloudflare stops anyone from bypassing the cache and hitting nginx
 or ServerDog head-on.
 
 On the droplet, as root (`sudo -i`):
@@ -167,13 +169,12 @@ ufw allow OpenSSH
 ss -tlnp
 grep IPV6 /etc/default/ufw      # must be IPV6=yes, or the Cloudflare IPv6 rules do nothing
 
-# 2. Allow 80/443 from Cloudflare's ranges, and write Apache's real-IP config.
+# 2. Allow 80/443 from Cloudflare's ranges, and write nginx's real-IP config.
 sh cloudflare-ips.sh            # from deploy/; copy it over first
-a2enmod remoteip
-a2enconf cloudflare-remoteip
+nginx -t && systemctl reload nginx
 
 # 3. Remove the old "anyone can reach 80/443" rules.
-ufw status numbered             # find rules like "Apache Full", "80/tcp", "443/tcp" from Anywhere
+ufw status numbered             # find rules like "Nginx Full", "80/tcp", "443/tcp" from Anywhere
 ufw delete <number>             # one at a time, highest number first; re-run status between deletes
 
 # 4. Turn the firewall on (if it isn't) and check.
@@ -181,18 +182,11 @@ ufw enable
 ufw status verbose
 ```
 
-Then make Apache's logs show the visitor address. In `/etc/apache2/apache2.conf`, change `%h`
-to `%a` at the start of the `combined` and `common` `LogFormat` lines, then:
-
-```sh
-apache2ctl configtest && systemctl reload apache2
-```
-
 Check that both sites still load in a browser. `curl -I http://<droplet IP>` from your machine
 should now time out. That's the point.
 
 Cloudflare rarely changes its ranges. To pick up new ones, re-run `cloudflare-ips.sh` and
-`systemctl reload apache2`.
+`systemctl reload nginx`.
 
 If you also use a DigitalOcean Cloud Firewall on the droplet, it must allow 80/443 too (from
 anywhere or from the Cloudflare ranges), or it blocks traffic before ufw sees it.
@@ -240,5 +234,5 @@ none of these.
   certificate (padlock → certificate details).
 - **Caching → Overview** (or the zone's Analytics) shows the cached-request share climbing
   over the first day.
-- On the droplet, `tail -f /var/log/apache2/servers.dog-access.log` shows visitor IPs (not
+- On the droplet, `tail -f /var/log/nginx/servers.dog-access.log` shows visitor IPs (not
   Cloudflare's), and only a trickle of requests compared with the traffic Cloudflare reports.

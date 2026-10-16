@@ -5,7 +5,7 @@
 #
 # DEPLOY_HOST is the droplet's SSH target (its IP, not servers.dog, which resolves to
 # Cloudflare). The remote user needs sudo; ssh -t lets sudo ask for a password. One-time
-# setup of the user, config, unit and Apache site is in deploy/DEPLOY.md.
+# setup of the user, config, unit and nginx site is in deploy/DEPLOY.md.
 set -eu
 
 : "${DEPLOY_HOST:?set DEPLOY_HOST to the droplet SSH target, e.g. deploy@203.0.113.10}"

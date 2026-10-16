@@ -15,7 +15,7 @@ Signatures here are summaries; `go doc ./internal/<pkg>` (or `go doc ./internal/
   §8 requirements (bold subheads: Data provider, Scheduling and tracking, Published data, HTTP serving, Browser UI, Configuration),
   §10.2 layout, §10.3 interfaces, §10.4 fakes, §11 UI, §15 glossary.
 - PLAN: `grep -n '\[ \]' docs/PLAN.md | head` for the next tasks; read only the current stage's section.
-- ADRs (`docs/adr/`, template `0000-template.md`): `0001` Apache terminates TLS and proxies to the binary on loopback.
+- ADRs (`docs/adr/`, template `0000-template.md`): `0001` nginx terminates TLS and proxies to the binary on loopback.
 
 ## Wiring
 
@@ -23,7 +23,7 @@ Signatures here are summaries; `go doc ./internal/<pkg>` (or `go doc ./internal/
 
 ## Deploy
 
-`deploy/`: `serverdog.service` (systemd, user `serverdog`, `StateDirectory` `/var/lib/serverdog`), `serverdog.example.json` (loopback `127.0.0.1:8080`; `TestDeployExampleConfig` loads it), `apache-servers.dog.conf` (TLS + `ProxyPass`), `cloudflare-ips.sh` (ufw + `mod_remoteip` from Cloudflare ranges), `deploy.sh` (`DEPLOY_HOST=… deploy/deploy.sh`), `DEPLOY.md` (setup, header checks), `CLOUDFLARE.md` (tutorial for servers.dog + redforman.dev).
+`deploy/`: `serverdog.service` (systemd, user `serverdog`, `StateDirectory` `/var/lib/serverdog`), `serverdog.example.json` (loopback `127.0.0.1:8080`; `TestDeployExampleConfig` loads it), `nginx-servers.dog.conf` (TLS + `proxy_pass`), `cloudflare-ips.sh` (ufw + nginx real IP from Cloudflare ranges), `deploy.sh` (`DEPLOY_HOST=… deploy/deploy.sh`), `DEPLOY.md` (setup, header checks), `CLOUDFLARE.md` (tutorial for servers.dog + redforman.dev).
 
 ## Packages
 

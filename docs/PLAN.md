@@ -20,7 +20,7 @@ to the Parked section at the bottom.
 - **Static to the visitor:** one Go binary writes `servers.json` and serves an embedded static page. Cloudflare caches everything, so origin load stays flat.
 - **Provider-agnostic:** all wardogservers.com specifics live behind the `Source` interface, so the provider can be swapped.
 - **Sync end to end:** the poller, published `nextUpdateAt`, `s-maxage`, and the client's next fetch all follow the provider's cycle.
-- **Stack:** Go (standard library only), vanilla HTML/CSS/ES modules, `node --test` for frontend logic. TLS via a Cloudflare Origin Certificate in Apache, reverse-proxying to the binary (ADR 0001). Systemd on a DigitalOcean droplet. GitHub + Actions CI.
+- **Stack:** Go (standard library only), vanilla HTML/CSS/ES modules, `node --test` for frontend logic. TLS via a Cloudflare Origin Certificate in nginx, reverse-proxying to the binary (ADR 0001). Systemd on a DigitalOcean droplet. GitHub + Actions CI.
 - **Visuals** are copied from in-game screenshots in `design/screenshots/` (review notes in `design/screenshots/NOTES.md`). No game artwork or map images; the font is self-hosted Barlow.
 - **MVP guardrail:** servers.dog is live for 7 days, the owner has used Find Fresh Starts to join fresh matches, upstream requests stayed within budget, and the stale notice appeared only during upstream outages.
 
@@ -174,9 +174,9 @@ and unpredictability.
 ### Deploy and go live
 
 - [x] **2.9** Write `deploy/`:
-  - systemd unit (restart on failure, dedicated user, no privileges: loopback `127.0.0.1:8080` behind Apache, ADR 0001);
+  - systemd unit (restart on failure, dedicated user, no privileges: loopback `127.0.0.1:8080` behind nginx, ADR 0001);
   - `serverdog.example.json`;
-  - Apache reverse-proxy site with the Cloudflare Origin Certificate, `cloudflare-ips.sh` (ufw + `mod_remoteip`), and `CLOUDFLARE.md`, a tutorial putting servers.dog and redforman.dev behind Cloudflare;
+  - nginx reverse-proxy site with the Cloudflare Origin Certificate, `cloudflare-ips.sh` (ufw + nginx real IP), and `CLOUDFLARE.md`, a tutorial putting servers.dog and redforman.dev behind Cloudflare;
   - `deploy.sh` (`GOOS=linux GOARCH=amd64 go build` → `scp` → `systemctl restart`);
   - `DEPLOY.md` covering the Cloudflare Origin Certificate, SSL "Full (strict)", the Cache Rule (servers.dog cached by origin headers) and Tiered Cache, firewalling to Cloudflare IP ranges, and the `curl -I` header checks (SPEC §8 Deployment, §10.1).
 - [ ] **2.10** Deploy to servers.dog. Verify with `curl -I` that `servers.json`, `index.html` and assets return the expected `Cache-Control` and `cf-cache-status: HIT` on repeat. Confirm the binary stays under 64 MB RSS. After 24h of live running, review the logs for upstream request counts per cycle and freshness (new match published within 90s of the snapshot), then tune `drop_pct`, `drop_min`, `starting_window` and the rates. Record the chosen values in SPEC §13 (SPEC §9, §13).
