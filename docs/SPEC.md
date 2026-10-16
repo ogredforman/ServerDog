@@ -112,6 +112,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 3. Not-started: keep the server queued as P1 while inside `StartingWindow`.
    Unknown: keep the previous start (still counts as this snapshot's check).
 4. Errors on one server: skip it this cycle and keep its previous state. Repeated 429/503 pause all detail fetching (with backoff) and cut the burst short. Unchecked P0 servers then publish as estimates.
+   "Repeated" means 2 throttled detail responses in a row; any successful detail resets the count. A single one only honors `Retry-After`. From the second on, detail fetching (not snapshot polling) pauses for max(`Retry-After`, backoff), with the backoff going 15s → 30s → … capped at 5 min. While paused, bursts are skipped, and the sweep resumes only if the pause ends before the next snapshot is due.
 
 ### 7.4 Publish
 

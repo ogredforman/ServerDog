@@ -23,6 +23,7 @@ type event struct {
 	at   time.Time
 	snap *source.Snapshot // snapshot: the new snapshot, nil on error or not modified
 	file *publish.File    // publish
+	err  error            // detail: the request's error
 }
 
 // harness runs a Scheduler against a Source and the fake clock, logging every upstream
@@ -63,8 +64,10 @@ func (h *harness) Snapshot(ctx context.Context, prevTag string) (source.Snapshot
 }
 
 func (h *harness) MatchStart(ctx context.Context, id string) (source.MatchStart, error) {
-	h.add(event{kind: "detail", id: id, at: h.clk.Now()})
-	return h.Source.MatchStart(ctx, id)
+	at := h.clk.Now()
+	ms, err := h.Source.MatchStart(ctx, id)
+	h.add(event{kind: "detail", id: id, at: at, err: err})
+	return ms, err
 }
 
 // run runs a Scheduler over h until the clock passes t0+end, stepping the clock from one
@@ -486,5 +489,182 @@ func TestCyclePublishFailureKeepsRunning(t *testing.T) {
 	// With no publish event, cycles() files the cycle's sweep requests under burst.
 	if got := ids(append(cs[0].burst, cs[0].sweep...)); len(got) != 1 {
 		t.Errorf("cycle 1 details = %v after a failed publish, want the sweep of [A]", got)
+	}
+}
+
+// throttle answers every detail request with a RetryAfterError while the clock is inside one
+// of its windows (offsets from t0).
+type throttle struct {
+	source.Source
+	clk     clock.Clock
+	after   time.Duration
+	windows [][2]time.Duration
+}
+
+func (th throttle) MatchStart(ctx context.Context, id string) (source.MatchStart, error) {
+	now := th.clk.Now().Sub(t0)
+	for _, w := range th.windows {
+		if now >= w[0] && now < w[1] {
+			return source.MatchStart{}, source.RetryAfterError{After: th.after}
+		}
+	}
+	return th.Source.MatchStart(ctx, id)
+}
+
+// checkRates asserts the total upstream rate cap over every request, snapshot or detail,
+// across burst, sweep and cycle boundaries: no two requests closer than the faster configured
+// rate allows, and none inside a Retry-After pause (SPEC §8 Data provider). It returns the
+// longest run of consecutive throttled details.
+func (h *harness) checkRates(t *testing.T) int {
+	t.Helper()
+	gap := time.Duration(float64(time.Second) / max(h.opts.BurstRate, h.opts.SweepRate))
+	var prev *event
+	var pausedUntil time.Time
+	run, longest := 0, 0
+	for i := range h.events {
+		e := &h.events[i]
+		if e.kind == "publish" {
+			continue
+		}
+		if prev != nil && e.at.Sub(prev.at) < gap {
+			t.Errorf("%s %s at +%v only %v after the previous request, want >= %v", e.kind, e.id, e.at.Sub(t0), e.at.Sub(prev.at), gap)
+		}
+		if e.at.Before(pausedUntil) {
+			t.Errorf("%s %s at +%v inside a Retry-After pause until +%v", e.kind, e.id, e.at.Sub(t0), pausedUntil.Sub(t0))
+		}
+		var ra source.RetryAfterError
+		switch {
+		case errors.As(e.err, &ra):
+			pausedUntil = e.at.Add(ra.After)
+			run++
+			longest = max(longest, run)
+		case e.kind == "detail" && e.err == nil:
+			run = 0
+		}
+		prev = e
+	}
+	return longest
+}
+
+// TestCycleRepeatedThrottleCutsBurst: a second throttle in a row ends the burst at once, so the
+// cycle publishes without waiting and unchecked P0 servers stay estimates; the sweep checks
+// them once the detail pause is over (SPEC §7.3 step 4).
+func TestCycleRepeatedThrottleCutsBurst(t *testing.T) {
+	clk := clock.NewFake(t0)
+	inner := fake.New(clk)
+	names := []string{"A", "B", "C", "D", "E"}
+	var before, after []source.Server
+	for _, n := range names {
+		before = append(before, srv(n, 10, "m1"))
+		after = append(after, srv(n, 10, "m2"))
+		inner.SetMatchStart(n, exactAt(refresh-5*time.Second))
+	}
+	inner.AddSnapshots(withServers(snap("1", "a", 0), before...), withServers(snap("2", "b", refresh), after...))
+	poll := refresh + pollDelay
+	src := throttle{Source: inner, clk: clk, after: time.Second, windows: [][2]time.Duration{{poll, poll + 2*time.Second}}}
+	h := newHarness(clk, src, defaultOptions())
+	h.run(t, 20*time.Minute, refresh+90*time.Second)
+	h.checkPolite(t)
+	h.checkRates(t)
+
+	cs := h.cycles()
+	if len(cs) != 2 {
+		t.Fatalf("%d cycles, want 2", len(cs))
+	}
+	c := cs[1]
+	if got := ids(c.burst); len(got) != 2 || got[0] != "A" || got[1] != "B" {
+		t.Fatalf("burst = %v, want [A B] (cut after the second throttle)", got)
+	}
+	if got := c.publish[0].at; !got.Equal(c.burst[1].at) {
+		t.Errorf("published at +%v, want at once after the second throttle (+%v)", got.Sub(t0), c.burst[1].at.Sub(t0))
+	}
+	for _, n := range names {
+		checkState(t, c.publish[0].file, n, "estimate", refresh)
+	}
+	if got := ids(c.sweep); len(got) != 3 || got[0] != "C" {
+		t.Fatalf("sweep = %v, want [C D E]", got)
+	}
+	if wait := c.sweep[0].at.Sub(c.burst[1].at); wait != BackoffMin {
+		t.Errorf("sweep resumed %v after the second throttle, want %v", wait, BackoffMin)
+	}
+}
+
+// TestCycleThrottleBackoffGrows: while every detail is throttled, the detail pause doubles from
+// 15s up to 5 min across cycles, bursts are skipped while paused, snapshots keep coming, and
+// one good detail ends the backoff (SPEC §7.3 step 4, §7.1).
+func TestCycleThrottleBackoffGrows(t *testing.T) {
+	clk := clock.NewFake(t0)
+	inner := fake.New(clk)
+	var servers []source.Server
+	for _, n := range []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"} {
+		servers = append(servers, srv(n, 10, "m1"))
+	}
+	for i := range 6 {
+		ss := append([]source.Server{}, servers...)
+		if i >= 2 {
+			ss[0] = srv("A", 10, "m2") // A changes in the third snapshot: P0 while paused
+		}
+		inner.AddSnapshots(withServers(snap(string(rune('1'+i)), string(rune('a'+i)), time.Duration(i)*refresh), ss...))
+	}
+	src := throttle{Source: inner, clk: clk, after: time.Second, windows: [][2]time.Duration{{0, 1000 * time.Second}}}
+	h := newHarness(clk, src, defaultOptions())
+	h.run(t, 20*time.Minute, 6*refresh+5*time.Second)
+	h.checkPolite(t)
+	h.checkRates(t)
+
+	var details []event
+	for _, e := range h.events {
+		if e.kind == "detail" {
+			details = append(details, e)
+		}
+	}
+	want := []time.Duration{time.Second, 15 * time.Second, 30 * time.Second, time.Minute, 2 * time.Minute, 4 * time.Minute, 5 * time.Minute, 5 * time.Minute}
+	if len(details) < len(want)+2 {
+		t.Fatalf("%d detail requests, want at least %d", len(details), len(want)+2)
+	}
+	for i, w := range want {
+		if got := details[i+1].at.Sub(details[i].at); got != w {
+			t.Errorf("gap before detail %d = %v, want %v", i+1, got, w)
+		}
+	}
+	if details[len(want)].err != nil {
+		t.Errorf("detail %d at +%v failed (%v), want success after the throttle window", len(want), details[len(want)].at.Sub(t0), details[len(want)].err)
+	}
+	sweepGap := time.Duration(float64(time.Second) / h.opts.SweepRate)
+	if got := details[len(want)+1].at.Sub(details[len(want)].at); got != sweepGap {
+		t.Errorf("gap after the first good detail = %v, want the sweep rate %v", got, sweepGap)
+	}
+
+	cs := h.cycles()
+	if len(cs) != 6 {
+		t.Fatalf("%d cycles, want 6 (snapshots keep coming while details are paused)", len(cs))
+	}
+	if c := cs[2]; len(c.burst) != 0 || !c.publish[0].at.Equal(c.snap.FetchedAt.Add(pollDelay)) {
+		t.Errorf("snapshot 3: burst %v published at +%v, want no burst and an immediate publish", ids(c.burst), c.publish[0].at.Sub(t0))
+	}
+	checkState(t, cs[2].publish[0].file, "A", "estimate", 2*refresh)
+}
+
+// TestCycleRateCapWorldThrottled runs the generated world through throttling spells and checks
+// the total request-rate cap and politeness over every request (SPEC §8 Data provider, §9).
+func TestCycleRateCapWorldThrottled(t *testing.T) {
+	clk := clock.NewFake(t0)
+	o := defaultOptions()
+	o.BurstBudget = 20 // Concurrency 1: request goroutines record the clock before it moves on
+	src := throttle{Source: fake.NewWorld(clk, 7), clk: clk, after: 2 * time.Second,
+		windows: [][2]time.Duration{{200 * time.Second, 203 * time.Second}, {600 * time.Second, 700 * time.Second}}}
+	h := newHarness(clk, src, o)
+	h.run(t, 20*time.Minute, 15*time.Minute)
+	h.checkPolite(t)
+	if run := h.checkRates(t); run < repeatedThrottles {
+		t.Fatalf("longest throttled run %d: scenario never throttled repeatedly", run)
+	}
+	var burst, sweep int
+	for _, c := range h.cycles() {
+		burst += len(c.burst)
+		sweep += len(c.sweep)
+	}
+	if burst == 0 || sweep == 0 {
+		t.Fatalf("%d burst and %d sweep requests: scenario too quiet to check", burst, sweep)
 	}
 }

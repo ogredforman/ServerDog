@@ -39,7 +39,16 @@ type Scheduler struct {
 	log  *slog.Logger
 	lim  *Limiter
 	poll *Poller
+
+	mu          sync.Mutex
+	throttles   int       // consecutive throttled detail responses
+	pausedUntil time.Time // no detail request before this, after repeated throttling
+	pausedAt    time.Time // when pausedUntil was last set
 }
+
+// repeatedThrottles consecutive throttled detail responses pause detail fetching with backoff
+// and cut the burst short (SPEC §7.3 step 4).
+const repeatedThrottles = 2
 
 // New returns a Scheduler. Every upstream request it makes, snapshot or detail, goes through
 // one shared Limiter.
@@ -148,6 +157,7 @@ func (s *Scheduler) cycle(ctx context.Context, snap source.Snapshot) {
 		"burst_queued", len(burst),
 		"sweep", nSweep,
 		"sweep_queued", len(sweep),
+		"throttles", s.throttleCount(),
 	)
 }
 
@@ -168,7 +178,7 @@ func (s *Scheduler) fetch(ctx context.Context, ids []string, deadline time.Time,
 		if ctx.Err() != nil {
 			break
 		}
-		if ok, err := s.lim.WaitBefore(ctx, deadline); !ok || err != nil {
+		if !s.slot(ctx, deadline) {
 			<-sem
 			break
 		}
@@ -185,19 +195,86 @@ func (s *Scheduler) fetch(ctx context.Context, ids []string, deadline time.Time,
 	return n
 }
 
+// slot waits for a limiter slot before deadline (zero: no deadline) while detail fetching is
+// not paused, and reports whether the caller may make one detail request. During a pause the
+// burst (no deadline) stops at once; the sweep waits the pause out if it ends before deadline.
+// A slot reserved before a pause began is dropped rather than used.
+func (s *Scheduler) slot(ctx context.Context, deadline time.Time) bool {
+	for {
+		if until := s.detailsPausedUntil(); until.After(s.clk.Now()) {
+			if deadline.IsZero() || !until.Before(deadline) {
+				return false
+			}
+			if err := s.sleepUntil(ctx, until); err != nil {
+				return false
+			}
+		}
+		if ok, err := s.lim.WaitBefore(ctx, deadline); !ok || err != nil {
+			return false
+		}
+		if !s.detailsPausedUntil().After(s.clk.Now()) {
+			return true
+		}
+		// A pause began while we waited: drop the slot and wait again. Each pass either
+		// returns or moves past a pause, so the loop ends.
+	}
+}
+
+func (s *Scheduler) detailsPausedUntil() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.pausedUntil
+}
+
+func (s *Scheduler) throttleCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.throttles
+}
+
+// throttled records a throttled detail response at now to a request sent at sent. From the
+// repeatedThrottles-th in a row, detail fetching pauses for max(after, backoff), the backoff
+// doubling from BackoffMin up to BackoffMax. Responses to requests already in flight when the
+// last pause began count as that same throttling, so they don't grow the backoff again.
+func (s *Scheduler) throttled(sent, now time.Time, after time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if sent.Before(s.pausedAt) {
+		return
+	}
+	s.throttles++
+	if s.throttles < repeatedThrottles {
+		return
+	}
+	backoff := BackoffMax
+	if n := s.throttles - repeatedThrottles; n < 8 {
+		backoff = min(BackoffMin<<n, BackoffMax)
+	}
+	until := now.Add(max(after, backoff))
+	if until.After(s.pausedUntil) {
+		s.pausedUntil, s.pausedAt = until, now
+	}
+	s.log.Warn("detail fetching paused", "throttles", s.throttles, "until", s.pausedUntil)
+}
+
 // detail makes one detail request and applies the result (SPEC §7.3). A failed request skips
 // the server this cycle and keeps its previous state; a RetryAfterError pauses every upstream
-// request.
+// request, and repeated ones pause detail fetching with backoff.
 func (s *Scheduler) detail(ctx context.Context, id string) {
+	sent := s.clk.Now()
 	ms, err := s.src.MatchStart(ctx, id)
 	now := s.clk.Now()
 	var ra source.RetryAfterError
 	switch {
 	case err == nil:
 		s.trk.Apply(id, ms, now)
+		s.mu.Lock()
+		s.throttles = 0
+		s.mu.Unlock()
 	case ctx.Err() != nil:
 	case errors.As(err, &ra):
 		s.lim.PauseUntil(now.Add(ra.After))
+		s.throttled(sent, now, ra.After)
 		s.log.Warn("detail throttled", "server", id, "retry_after", ra.After)
 	default:
 		s.log.Warn("detail failed", "server", id, "err", err)
