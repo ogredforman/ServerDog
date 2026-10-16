@@ -32,8 +32,8 @@ export function rowCells(server, now) {
     official: server.t === 'o',
     name: server.n || server.id || '',
     rulesets: [...(server.rs || [])],
-    mode: server.exp || '',
-    map: server.map || server.base || '',
+    mode: server.mode || '',
+    map: server.map || '',
     players: `${server.p}/${server.mp}`,
     timer: formatTimer(server, now),
   };

@@ -25,20 +25,26 @@ var (
 		"asia-east", "asia-se", "asia-west", "eu-central", "eu-east", "eu-south", "eu-west",
 		"na-central", "na-east", "na-north", "na-west", "oceania", "south-america",
 	}
-	worldMaps = []source.Map{
-		{Variant: "Harbor", Base: "Harbor"}, {Variant: "Harbor Night", Base: "Harbor"},
-		{Variant: "Quarry", Base: "Quarry"}, {Variant: "Quarry Storm", Base: "Quarry"},
-		{Variant: "Outpost", Base: "Outpost"}, {Variant: "Rail Yard", Base: "Rail Yard"},
-		{Variant: "Rail Yard Dusk", Base: "Rail Yard"}, {Variant: "Dam", Base: "Dam"},
+	// The provider's maps (codename, base, in-game name) with their KOTH experiences.
+	worldMaps = []struct {
+		m          source.Map
+		experience string
+	}{
+		{source.Map{Variant: "Bakurani", Base: "Kavkazi", Name: "Bakurani"}, "Bakurani_KOTH_02"},
+		{source.Map{Variant: "Madrid", Base: "Kavkazi", Name: "Ozeti"}, "Madrid_KOTH_01"},
+		{source.Map{Variant: "Detroit", Base: "Kavkazi", Name: "Zestafona"}, "Detroit_KOTH_01"},
 	}
-	worldModes = []source.Mode{
-		{Experience: "Conquest", GameMode: "conquest"},
-		{Experience: "Breakthrough", GameMode: "breakthrough"},
-		{Experience: "Team Deathmatch", GameMode: "tdm"},
+	// Community modifier sets seen upstream, each with its matching rulesets.
+	worldModifiers = []struct {
+		modifiers []string
+		rulesets  []string
+	}{
+		{[]string{"KOTH_InfantryOnly"}, []string{"infantry-only"}},
+		{[]string{"KOTH_Hardcore"}, []string{"hardcore"}},
+		{[]string{"KOTH_InfantryOnly", "KOTH_Hardcore"}, []string{"hardcore", "infantry-only"}},
 	}
-	worldRulesets = []string{"hardcore", "no-vehicles", "custom-tickets"}
-	worldNames    = []string{"Dog Pound", "Kennel Club", "Night Watch", "Iron Pack", "Frontline", "Old Guard", "Red Collar", "Muddy Boots"}
-	worldMaxes    = []int{32, 64, 100}
+	worldNames = []string{"Dog Pound", "Kennel Club", "Night Watch", "Iron Pack", "Frontline", "Old Guard", "Red Collar", "Muddy Boots"}
+	worldMaxes = []int{32, 64, 100}
 )
 
 // worldRestartEvery is how many matches a server plays before its process restarts (new InstanceID).
@@ -63,7 +69,7 @@ type worldServer struct {
 	typ          source.ServerType
 	maxPlayers   int
 	password     bool
-	mode         source.Mode
+	modifiers    []string
 	rulesets     []string
 	kind         worldKind
 	fill         float64       // share of MaxPlayers once a match has filled up (normal servers)
@@ -107,16 +113,16 @@ func NewWorld(c clock.Clock, seed int64) *World {
 		e.offset = time.Duration(rng.Int64N(int64(e.matchLen)))
 		if rng.IntN(3) == 0 {
 			e.typ = source.Official
-			e.mode = worldModes[i%len(worldModes)]
-			e.name = fmt.Sprintf("Wardogs Official #%d", i+1)
-			e.rulesets = []string{"official"}
+			e.name = fmt.Sprintf("Official #%d", i+1)
+			e.rulesets = []string{"standard"}
 		} else {
 			e.typ = source.Community
-			e.mode = worldModes[rng.IntN(len(worldModes))]
 			e.name = fmt.Sprintf("%s %d", worldNames[rng.IntN(len(worldNames))], i+1)
 			e.password = rng.IntN(100) < 15
-			if rng.IntN(2) == 0 {
-				e.rulesets = []string{worldRulesets[rng.IntN(len(worldRulesets))]}
+			e.rulesets = []string{"standard"}
+			if rng.IntN(5) == 0 {
+				mod := worldModifiers[rng.IntN(len(worldModifiers))]
+				e.modifiers, e.rulesets = mod.modifiers, mod.rulesets
 			}
 		}
 		switch r := rng.IntN(100); {
@@ -205,9 +211,19 @@ func (w *World) MatchStart(ctx context.Context, serverID string) (source.MatchSt
 	return source.MatchStart{State: source.Exact, At: start}, nil
 }
 
+// mode is e's mode on a map with the given experience; modifiers are appended as upstream does
+// ("Madrid_KOTH_01+KOTH_InfantryOnly").
+func (e *worldServer) mode(experience string) source.Mode {
+	for _, m := range e.modifiers {
+		experience += "+" + m
+	}
+	return source.Mode{Experience: experience, GameMode: "GM_Session_C", Modifiers: e.modifiers, Name: "KOTH"}
+}
+
 // server renders roster entry e as seen at time at.
 func (w *World) server(e *worldServer, at time.Time) source.Server {
 	m, rotAt := e.match(at)
+	wm := worldMaps[posMod(int64(e.mapBase)+m, len(worldMaps))]
 	s := source.Server{
 		ID:                e.id,
 		InstanceID:        fmt.Sprintf("%s-%d", e.instBase, floorDivInt(m, worldRestartEvery)),
@@ -216,8 +232,8 @@ func (w *World) server(e *worldServer, at time.Time) source.Server {
 		Type:              e.typ,
 		MaxPlayers:        e.maxPlayers,
 		PasswordProtected: e.password,
-		Map:               worldMaps[posMod(int64(e.mapBase)+m, len(worldMaps))],
-		Mode:              e.mode,
+		Map:               wm.m,
+		Mode:              e.mode(wm.experience),
 		Rulesets:          e.rulesets,
 		ObservedAt:        at,
 	}

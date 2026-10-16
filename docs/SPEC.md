@@ -60,7 +60,7 @@ The design must not *preclude*:
 
 | Entity | Purpose | Key fields |
 |---|---|---|
-| **Server** | One game server as reported in a snapshot (provider-neutral) | `ID` (join code; may be empty), `InstanceID`, `Type` (official/community), `Region`, `Name`, `Players`, `MaxPlayers`, `PasswordProtected`, `Map{Variant, Base}`, `Mode{Experience, GameMode, Modifiers}`, `Rulesets`, `ObservedAt`, `MatchStart` (optional; set only if the provider's bulk list carries it) |
+| **Server** | One game server as reported in a snapshot (provider-neutral) | `ID` (join code; may be empty), `InstanceID`, `Type` (official/community), `Region`, `Name`, `Players`, `MaxPlayers`, `PasswordProtected`, `Map{Variant, Base, Name}`, `Mode{Experience, GameMode, Modifiers, Name}` (`Variant`/`Experience` are the provider's raw values; `Name` is the in-game display name), `Rulesets`, `ObservedAt`, `MatchStart` (optional; set only if the provider's bulk list carries it) |
 | **Snapshot** | One complete provider listing | `ID`, `FetchedAt`, `RefreshEvery`, `Stale`, `Complete`, `Servers[]`, `Tag` (opaque, for conditional fetches) |
 | **MatchStart** | What we know about when a server's current match started | `State` (exact / not-started / unknown), `At` (time, when exact) |
 | **TrackedServer** | Tracker state per join code, kept across snapshots and saved to disk | `ID`, last `InstanceID`, last `Map.Variant`, last `Mode.Experience`, last `Players`, `ChangeObservedAt` (when a new match was last inferred; cleared once a start confirms it), `Start` (MatchStart), `CheckedAt` (last detail fetch), `CheckedSnapshotID`, `Tier`, `LastSeen` (for eviction) |
@@ -133,7 +133,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 
 **Data provider**
 - [P] A `Source` interface (§10.3) with a fake implementation, selected by config (`source=fake`).
-- [M] A wardogservers.com adapter, selected by `source=wardogservers` (the default once it exists). It reads `/v1/snapshot` (ETag/If-None-Match) and `/v1/servers/{serverId}`. It decodes `attributes.MatchStartUTC` (`int64:<.NET ticks>`; `-1` = not started; missing = unknown) and maps upstream JSON to ServerDog types.
+- [M] A wardogservers.com adapter, selected by `source=wardogservers` (the default once it exists). It reads `/v1/snapshot` (ETag/If-None-Match) and `/v1/servers/{serverId}`. It decodes `attributes.MatchStartUTC` (`int64:<.NET ticks>`; `-1` = not started; missing = unknown) and maps upstream JSON to ServerDog types. It also sets display names: map codenames to in-game names (`Bakurani` → Bakurani, `Madrid` → Ozeti, `Detroit` → Zestafona, checked in-game 2026-10-16; unknown codenames pass through), and the mode from the experience (`<map>_<mode>_<n>[+modifiers]` → `KOTH`).
 - [M] Requests send `User-Agent: ServerDog/<version> (+https://servers.dog)`. Request timeout default 20s.
 - [M] Back off on 429/503 and `Retry-After`, with total detail request rate capped by config.
 
@@ -147,8 +147,8 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 - [M] Detail fetching switches off automatically when the provider's snapshot reports `MatchStart`.
 
 **Published data** (`/data/servers.json`)
-- [P] Top level: `v` (schema version, 1), `generatedAt`, `nextUpdateAt`, `snapshotAt` (provider `FetchedAt`), `refreshSeconds`, `stale`, `complete`, `regions` (sorted IDs present), `servers`.
-- [P] Per server (short keys): `id` (join code or empty), `t` (`o`/`c`), `r` (region), `n` (display name), `p`, `mp` (players, max), `pw` (password), `map` (variant), `base` (map base), `exp` (experience), `rs` (rulesets), `ms` (start, Unix seconds, or null), `st` (`exact` / `estimate` / `starting` / `unknown`).
+- [P] Top level: `v` (schema version, 2), `generatedAt`, `nextUpdateAt`, `snapshotAt` (provider `FetchedAt`), `refreshSeconds`, `stale`, `complete`, `regions` (sorted IDs present), `servers`.
+- [P] Per server (short keys): `id` (join code or empty), `t` (`o`/`c`), `r` (region), `n` (display name), `p`, `mp` (players, max), `pw` (password), `map` (in-game map name, e.g. `Ozeti`), `mode` (in-game mode name, e.g. `KOTH`), `rs` (rulesets), `ms` (start, Unix seconds, or null), `st` (`exact` / `estimate` / `starting` / `unknown`).
 - [P] Times are Unix seconds (integers). Servers with 0 players are included with `st: "unknown"`. `ms` is the confirmed start for `exact`, `ChangeObservedAt` for `estimate` and `starting`, and null for `unknown`. `nextUpdateAt` is `snapshotAt + refreshSeconds + PollDelay`, or 15s after `generatedAt` if that has passed.
 - [M] Gzip-compressed size under 100 KB at ~4,000 servers.
 
@@ -276,8 +276,8 @@ type Server struct {
     Type                         ServerType // Official | Community
     Players, MaxPlayers          int
     PasswordProtected            bool
-    Map                          Map  // {Variant, Base string}
-    Mode                         Mode // {Experience, GameMode string; Modifiers []string}
+    Map                          Map  // {Variant, Base, Name string}
+    Mode                         Mode // {Experience, GameMode string; Modifiers []string; Name string}
     Rulesets                     []string
     ObservedAt                   time.Time
     MatchStart                   *MatchStart // nil unless the provider's list carries it

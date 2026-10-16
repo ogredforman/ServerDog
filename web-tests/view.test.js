@@ -41,18 +41,18 @@ test('rowCells', () => {
   const cases = [
     {
       name: 'full row',
-      server: { id: 'X1', n: 'Dogs', t: 'o', p: 3, mp: 16, map: 'Harbor Night', base: 'Harbor', exp: 'Conquest', rs: ['HC', 'NoAim'], pw: true, ms: 1_800_000_000 - 65, st: 'exact' },
-      want: { full: false, empty: false, password: true, official: true, name: 'Dogs', rulesets: ['HC', 'NoAim'], mode: 'Conquest', map: 'Harbor Night', players: '3/16', timer: { text: '1:05', kind: 'exact' } },
+      server: { id: 'X1', n: 'Dogs', t: 'o', p: 3, mp: 16, map: 'Zestafona', mode: 'KOTH', rs: ['HC', 'NoAim'], pw: true, ms: 1_800_000_000 - 65, st: 'exact' },
+      want: { full: false, empty: false, password: true, official: true, name: 'Dogs', rulesets: ['HC', 'NoAim'], mode: 'KOTH', map: 'Zestafona', players: '3/16', timer: { text: '1:05', kind: 'exact' } },
     },
     {
       name: 'sparse row falls back',
-      server: { id: 'X2', t: 'c', p: 0, mp: 0, base: 'Harbor', ms: null, st: 'unknown' },
-      want: { full: true, empty: true, password: false, official: false, name: 'X2', rulesets: [], mode: '', map: 'Harbor', players: '0/0', timer: { text: '—', kind: 'unknown' } },
+      server: { id: 'X2', t: 'c', p: 0, mp: 0, ms: null, st: 'unknown' },
+      want: { full: true, empty: true, password: false, official: false, name: 'X2', rulesets: [], mode: '', map: '', players: '0/0', timer: { text: '—', kind: 'unknown' } },
     },
     {
       name: 'full but not empty, starting',
-      server: { id: 'X3', n: 'Packed', t: 'c', p: 16, mp: 16, map: 'Dunes', exp: 'Conquest', rs: ['hardcore'], ms: 1_800_000_000, st: 'starting' },
-      want: { full: true, empty: false, password: false, official: false, name: 'Packed', rulesets: ['hardcore'], mode: 'Conquest', map: 'Dunes', players: '16/16', timer: { text: 'STARTING', kind: 'starting' } },
+      server: { id: 'X3', n: 'Packed', t: 'c', p: 16, mp: 16, map: 'Bakurani', mode: 'KOTH', rs: ['hardcore'], ms: 1_800_000_000, st: 'starting' },
+      want: { full: true, empty: false, password: false, official: false, name: 'Packed', rulesets: ['hardcore'], mode: 'KOTH', map: 'Bakurani', players: '16/16', timer: { text: 'STARTING', kind: 'starting' } },
     },
   ];
   for (const c of cases) {

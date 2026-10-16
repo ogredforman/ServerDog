@@ -111,8 +111,8 @@ func TestWorldRotationPattern(t *testing.T) {
 			if (sv.Map != p.Map) != rotated {
 				t.Fatalf("server %d: map %v → %v, rotated=%v", i, p.Map, sv.Map, rotated)
 			}
-			if sv.Mode.Experience != p.Mode.Experience {
-				t.Fatalf("server %d: experience changed", i)
+			if (sv.Mode.Experience != p.Mode.Experience) != rotated {
+				t.Fatalf("server %d: experience %q → %q, rotated=%v", i, p.Mode.Experience, sv.Mode.Experience, rotated)
 			}
 			wantRestart := rotated && floorDivInt(mCur, worldRestartEvery) != floorDivInt(mPrev, worldRestartEvery)
 			if (sv.InstanceID != p.InstanceID) != wantRestart {

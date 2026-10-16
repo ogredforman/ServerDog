@@ -67,8 +67,9 @@ func sizeServers(rng *rand.Rand, n int) []source.Server {
 			s.Players = 1 + rng.Intn(s.MaxPlayers)
 		}
 		m := maps[rng.Intn(len(maps))]
-		s.Map = source.Map{Variant: m.variant, Base: m.base}
-		s.Mode = source.Mode{Experience: m.variant + "_" + modes[rng.Intn(len(modes))]}
+		mode := modes[rng.Intn(len(modes))]
+		s.Map = source.Map{Variant: m.variant, Base: m.base, Name: m.variant}
+		s.Mode = source.Mode{Experience: m.variant + "_" + mode, Name: mode}
 		servers[i] = s
 	}
 	return servers

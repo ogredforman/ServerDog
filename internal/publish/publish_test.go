@@ -28,8 +28,8 @@ func srv(id string, players int) source.Server {
 		Region:     "eu",
 		Players:    players,
 		MaxPlayers: 128,
-		Map:        source.Map{Variant: "map-1", Base: "base"},
-		Mode:       source.Mode{Experience: "exp-1"},
+		Map:        source.Map{Variant: "map-1", Base: "base", Name: "Map One"},
+		Mode:       source.Mode{Experience: "exp-1", Name: "KOTH"},
 	}
 }
 
@@ -62,7 +62,7 @@ func TestBuildSchema(t *testing.T) {
 	}
 	delete(got, "servers")
 	wantTop := map[string]any{
-		"v":              float64(1),
+		"v":              float64(2),
 		"generatedAt":    float64(t0.Unix() + 5),
 		"nextUpdateAt":   float64(t0.Add(every + pollDelay).Unix()),
 		"snapshotAt":     float64(t0.Unix()),
@@ -76,7 +76,7 @@ func TestBuildSchema(t *testing.T) {
 	}
 	wantServer := map[string]any{
 		"id": "ABC", "t": "c", "r": "eu", "n": "Server ABC", "p": float64(10), "mp": float64(128),
-		"pw": true, "map": "map-1", "base": "base", "exp": "exp-1", "rs": []any{"hardcore"},
+		"pw": true, "map": "Map One", "mode": "KOTH", "rs": []any{"hardcore"},
 		"ms": nil, "st": "unknown",
 	}
 	if !reflect.DeepEqual(servers[0], wantServer) {

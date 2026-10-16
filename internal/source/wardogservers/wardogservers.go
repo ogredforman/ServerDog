@@ -289,8 +289,8 @@ func (b snapshotJSON) toSource(etag string) (source.Snapshot, error) {
 			Players:           s.Players,
 			MaxPlayers:        s.MaxPlayers,
 			PasswordProtected: s.PasswordProtected,
-			Map:               source.Map{Variant: s.Map.Variant, Base: s.Map.Base},
-			Mode:              source.Mode{Experience: s.Mode.Experience, GameMode: s.Mode.GameMode, Modifiers: s.Mode.Modifiers},
+			Map:               source.Map{Variant: s.Map.Variant, Base: s.Map.Base, Name: mapName(s.Map.Variant)},
+			Mode:              source.Mode{Experience: s.Mode.Experience, GameMode: s.Mode.GameMode, Modifiers: s.Mode.Modifiers, Name: modeName(s.Mode.Experience)},
 			Rulesets:          s.Rulesets,
 			ObservedAt:        s.ObservedAt,
 		})
@@ -299,4 +299,31 @@ func (b snapshotJSON) toSource(etag string) (source.Snapshot, error) {
 		slog.Warn("skipped servers with unknown type", "snapshot", m.SnapshotID, "count", unknownType)
 	}
 	return snap, nil
+}
+
+// mapNames maps the provider's map variant codenames to in-game map names (checked in-game
+// against live servers, 2026-10-16).
+var mapNames = map[string]string{
+	"Bakurani": "Bakurani",
+	"Madrid":   "Ozeti",
+	"Detroit":  "Zestafona",
+}
+
+// mapName is the in-game name for a map variant, or the variant itself when it isn't known.
+func mapName(variant string) string {
+	if n, ok := mapNames[variant]; ok {
+		return n
+	}
+	return variant
+}
+
+// modeName is the in-game mode for an experience: "Bakurani_KOTH_02+KOTH_InfantryOnly" is
+// <map>_<mode>_<n> plus modifiers, so KOTH. An experience without that shape is returned as is,
+// minus modifiers.
+func modeName(experience string) string {
+	base, _, _ := strings.Cut(experience, "+")
+	if parts := strings.Split(base, "_"); len(parts) >= 3 {
+		return parts[1]
+	}
+	return base
 }

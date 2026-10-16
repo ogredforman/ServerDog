@@ -120,6 +120,36 @@ func TestDecodeTicks(t *testing.T) {
 	}
 }
 
+// Display names: the provider's map codenames as seen in-game, and the mode from the experience.
+func TestDisplayNames(t *testing.T) {
+	maps := []struct{ variant, want string }{
+		{"Bakurani", "Bakurani"},
+		{"Madrid", "Ozeti"},
+		{"Detroit", "Zestafona"},
+		{"Tbilisi", "Tbilisi"}, // unknown codename: raw
+		{"", ""},
+	}
+	for _, c := range maps {
+		if got := mapName(c.variant); got != c.want {
+			t.Errorf("mapName(%q) = %q, want %q", c.variant, got, c.want)
+		}
+	}
+	modes := []struct{ experience, want string }{
+		{"Bakurani_KOTH_02", "KOTH"},
+		{"Madrid_KOTH_01+KOTH_InfantryOnly", "KOTH"},
+		{"Detroit_KOTH_01+KOTH_InfantryOnly+KOTH_Hardcore", "KOTH"},
+		{"Ozeti_TDM_01", "TDM"},
+		{"KOTH", "KOTH"},
+		{"KOTH+KOTH_Hardcore", "KOTH"},
+		{"", ""},
+	}
+	for _, c := range modes {
+		if got := modeName(c.experience); got != c.want {
+			t.Errorf("modeName(%q) = %q, want %q", c.experience, got, c.want)
+		}
+	}
+}
+
 func TestSnapshotMapsFixture(t *testing.T) {
 	fs := newFixtureServer(t, map[string]route{
 		"/v1/snapshot": {header: map[string]string{"ETag": snapshotETag}, fixture: "snapshot.json"},
@@ -145,8 +175,8 @@ func TestSnapshotMapsFixture(t *testing.T) {
 		Type:       source.Community,
 		Players:    98,
 		MaxPlayers: 100,
-		Map:        source.Map{Variant: "Madrid", Base: "Kavkazi"},
-		Mode:       source.Mode{Experience: "Madrid_KOTH_01+KOTH_InfantryOnly", GameMode: "GM_Session_C", Modifiers: []string{"KOTH_InfantryOnly"}},
+		Map:        source.Map{Variant: "Madrid", Base: "Kavkazi", Name: "Ozeti"},
+		Mode:       source.Mode{Experience: "Madrid_KOTH_01+KOTH_InfantryOnly", GameMode: "GM_Session_C", Modifiers: []string{"KOTH_InfantryOnly"}, Name: "KOTH"},
 		Rulesets:   []string{"infantry-only"},
 		ObservedAt: time.Date(2026, 10, 16, 1, 16, 56, 253_000_000, time.UTC),
 	}

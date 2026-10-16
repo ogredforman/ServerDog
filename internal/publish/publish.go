@@ -17,7 +17,7 @@ import (
 
 // Version is the published schema version (`v`). Bump it, and SPEC §8 "Published data",
 // whenever the shape changes.
-const Version = 1
+const Version = 2
 
 // FileName is the published file's name inside the data directory.
 const FileName = "servers.json"
@@ -48,9 +48,8 @@ type Server struct {
 	Players    int      `json:"p"`
 	MaxPlayers int      `json:"mp"`
 	Password   bool     `json:"pw"`
-	Map        string   `json:"map"`
-	Base       string   `json:"base"`
-	Experience string   `json:"exp"`
+	Map        string   `json:"map"`  // in-game map name
+	Mode       string   `json:"mode"` // in-game mode name
 	Rulesets   []string `json:"rs"`
 	MatchStart *int64   `json:"ms"` // null when st is unknown; for starting, when the change was observed
 	State      string   `json:"st"`
@@ -96,9 +95,8 @@ func server(s source.Server, starts Starts, now time.Time) Server {
 		Players:    s.Players,
 		MaxPlayers: s.MaxPlayers,
 		Password:   s.PasswordProtected,
-		Map:        s.Map.Variant,
-		Base:       s.Map.Base,
-		Experience: s.Mode.Experience,
+		Map:        s.Map.Name,
+		Mode:       s.Mode.Name,
 		Rulesets:   append([]string{}, s.Rulesets...),
 		State:      tracker.Unknown.String(),
 	}

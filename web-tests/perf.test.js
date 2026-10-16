@@ -11,7 +11,7 @@ const budgetMs = 16;
 const now = 1_800_000_000_000;
 const regions = ['eu-central', 'eu-west', 'na-east', 'na-west', 'asia-east', 'oceania'];
 const states = ['exact', 'estimate', 'starting', 'unknown'];
-const maps = ['Harbor', 'Dunes', 'Quarry', 'Ridge', 'Outpost'];
+const maps = ['Bakurani', 'Ozeti', 'Zestafona'];
 
 // servers is a deterministic 4,000-server list with every published state.
 function servers(n) {
@@ -30,7 +30,7 @@ function servers(n) {
       p: rand(mp + 1),
       mp,
       map: maps[rand(maps.length)],
-      exp: rand(2) ? 'Conquest' : 'Breakthrough',
+      mode: 'KOTH',
       rs: rand(4) === 0 ? ['hardcore'] : [],
       pw: rand(10) === 0,
       ms: 1_800_000_000 - rand(7200),

@@ -77,17 +77,21 @@ type Server struct {
 	MatchStart *MatchStart
 }
 
-// Map is the map a server is currently running.
+// Map is the map a server is currently running. Variant and Base are the provider's raw values
+// (the tracker compares Variant to spot a new match); Name is the in-game display name.
 type Map struct {
 	Variant string
 	Base    string
+	Name    string
 }
 
-// Mode is a server's experience, game mode and modifiers.
+// Mode is a server's experience, game mode and modifiers as the provider reports them, and Name,
+// the in-game display name (e.g. KOTH).
 type Mode struct {
 	Experience string
 	GameMode   string
 	Modifiers  []string
+	Name       string
 }
 
 // ServerType says whether a server is run by the game or by the community.

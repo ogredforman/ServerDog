@@ -165,6 +165,10 @@ and unpredictability.
   - a chosen region that is known (in `REGIONS`) filters even when it has no servers right now; only saved IDs that are neither known nor in the data are ignored (`viewServers`, `activeFilters`, region count);
   - `fake.NewWorld` uses the real provider IDs (all 13 from `meta.requestedRegions`) instead of `sa` / `asia`;
   - update SPEC §11 Region selector and NOTES 03 (South Africa no longer omitted) (SPEC §8 Browser UI, §11).
+- [x] **2.7d** Show the servers' real map and mode, as in-game. The provider sends map codenames (`Madrid`, `Detroit`) and raw experiences (`Madrid_KOTH_01`), and the fake world invented non-Wardogs maps and modes:
+  - `source.Map.Name` / `source.Mode.Name` display fields, filled by the wardogservers adapter (Madrid → Ozeti, Detroit → Zestafona, Bakurani → Bakurani, verified in-game; mode from the experience → KOTH); raw `Variant`/`Experience` stay for the tracker;
+  - `fake.NewWorld` uses the three real maps, KOTH and real experience/modifier/ruleset strings;
+  - `servers.json` v2: `map` and `mode` hold display names; `base` and `exp` dropped (SPEC §6.1, §8 Data provider, Published data, §10.3).
 - [ ] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Make the selected row's copy-join-code button work, with "Copied" feedback. Confirm the first load is under 150 KB, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
 
 ### Deploy and go live
@@ -228,3 +232,4 @@ Ideas and tangents captured mid-work (via `/devflow:park`). Not scheduled. Revie
 
 - **[M] Versioned static assets** (from PLAN 1.11): `/js/*` is served unversioned with the index policy (`public, max-age=60, s-maxage=300`). At [M], fill `?v=<content hash>` into `index.html` at startup and serve versioned assets `public, max-age=31536000, immutable` (SPEC §8 HTTP serving).
 - **[L] Join Match link** (from PLAN 2.5b): if Wardogs or Steam turns out to accept a join code through a launch link (`steam://…` or a game URL scheme), make the selected row's gold button join the match directly instead of copying the code (SPEC §11).
+- **[M] Ruleset chip display names** (from PLAN 2.7d): the provider sends ruleset IDs (`standard`, `infantry-only`, `hardcore`), but the in-game chip for `standard` reads `PERSISTENT CASH / XP` (screenshot 01). Map ruleset IDs to in-game chip text in the wardogservers adapter, like map names; check `infantry-only` and `hardcore` in-game first (SPEC §11).

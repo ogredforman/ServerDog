@@ -7,10 +7,10 @@ const srv = (id, fields) => ({ id, n: id, p: 0, mp: 10, map: '', rs: [], pw: fal
 
 test('sortServers by column and direction', () => {
   const servers = [
-    srv('b', { p: 5, map: 'Dunes', exp: 'Koth', rs: ['hc'], pw: true, st: 'exact', ms: 100 }),
-    srv('a', { p: 9, map: 'Arctic', exp: 'Conquest', rs: ['vanilla'], st: 'estimate', ms: 300 }),
+    srv('b', { p: 5, map: 'Zestafona', mode: 'KOTH', rs: ['hc'], pw: true, st: 'exact', ms: 100 }),
+    srv('a', { p: 9, map: 'Bakurani', mode: 'Assault', rs: ['vanilla'], st: 'estimate', ms: 300 }),
     srv('d', { p: 0 }),
-    srv('c', { p: 5, map: '', base: 'Coast', exp: 'Koth', rs: ['ffa', 'hc'], st: 'starting', ms: 200 }),
+    srv('c', { p: 5, map: 'Ozeti', mode: 'KOTH', rs: ['ffa', 'hc'], st: 'starting', ms: 200 }),
   ];
   const cases = [
     ['name', 'asc', ['a', 'b', 'c', 'd']],

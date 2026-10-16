@@ -25,6 +25,10 @@ preselected (last region played). The top row is hovered; nothing else is clicke
   shield-check (official), `SERVER NAME`, `MODE`, `MAP`, `PLAYERS`, `PING`.
   - Headers show `▶` when not sorted by that column, and an up/down arrow when sorted by it.
   - ServerDog: replace `PING` with the match timer column, in the same slot.
+  - The provider uses codenames for maps (`map.variant`): `Bakurani` = BAKURANI, `Madrid` = OZETI,
+    `Detroit` = ZESTAFONA (owner checked Official #44, #48 and #11 in NA East in-game, 2026-10-16).
+    Every mode is KOTH (`mode.experience` `<map>_KOTH_<n>`, plus `+KOTH_InfantryOnly` /
+    `+KOTH_Hardcore` modifiers on some community servers).
 - **Rows** (`#3d3e3f`, ~8px dark gap between rows):
   - yellow shield-check on official servers;
   - name in uppercase, wide letter spacing, with ruleset tag chips under it (light grey chip,
