@@ -1,5 +1,5 @@
-/* Page frame, chrome and list headers, from design/screenshots/ and NOTES.md (SPEC §11).
-   Row looks and states are PLAN 2.7. Colors are sampled from the screenshots. */
+/* Page frame, chrome, list headers, rows and their states, from design/screenshots/ and
+   NOTES.md (SPEC §11). Colors are sampled from the screenshots. */
 
 :root {
   --page: #1f2021;
@@ -17,6 +17,22 @@
   --head-bg: #1e1e1e;
   --head-sorted: #3a3b3b;
   --row: #3d3e3f;
+  --row-top: #474849;
+  --row-hover: #4c4d4e;
+  --row-hover-top: #565758;
+  --row-ring: #9f9f9f;
+  --row-divider: rgba(0, 0, 0, 0.35);
+  --selected-top: #856519;
+  --selected: #7c6325;
+  --chip: #b9b9b9;
+  --chip-text: #2a2a2a;
+  --join-from: #211a0b;
+  --join-to: #4d3d14;
+  --fresh-from: #3b2d0c;
+  --fresh-to: #6b5418;
+  --fresh-text: #f2d46b;
+  --starting: #f2c94c;
+  --timer-unknown: #6f7072;
   --modal: #0f0f0f;
   --gold: #b79010;
   --check: #9e9e9e;
@@ -199,7 +215,20 @@ main {
   gap: 18px;
   margin-bottom: 10px;
 }
-#fresh-starts { margin-left: auto; }
+/* Find Fresh Starts: the game's gold (CONFIRM / JOIN MATCH), apart from the amber toggles. */
+#fresh-starts {
+  margin-left: auto;
+  background: linear-gradient(var(--fresh-from), var(--fresh-to));
+  border-color: var(--gold);
+  color: var(--fresh-text);
+  font-weight: 600;
+}
+#fresh-starts:hover { background: linear-gradient(var(--fresh-to), var(--selected-top)); }
+#fresh-starts[aria-pressed="true"] {
+  background: linear-gradient(var(--selected-top), var(--check-on));
+  border-color: var(--official);
+  color: var(--text-bright);
+}
 
 .btn {
   min-width: 124px;
@@ -275,24 +304,94 @@ main {
 .arrow { font-size: 10px; }
 .icon { width: 15px; height: 15px; color: var(--icon); }
 
-/* Minimal row frame so the new columns read; row looks and states are PLAN 2.7. */
+/* Rows (01, 04, 06): an 8px dark gap above each row, a lighter top edge, thin dividers between
+   cells. Hover and selected outlines are inset shadows: --ring is the outline color and --side
+   the cell's left edge (divider or outline), so the states compose without borders. */
 #server-list tbody td {
-  padding: 8px 12px;
-  background: var(--row);
+  --ring: transparent;
+  --side: 0 0 transparent;
+  padding: 9px 12px;
+  background: linear-gradient(var(--row-top), var(--row) 35%);
   border-top: 8px solid var(--panel);
+  box-shadow: inset 0 1px var(--ring), inset 0 -1px var(--ring), var(--side);
   text-align: center;
   text-transform: uppercase;
   letter-spacing: var(--track);
 }
+#server-list tbody td + td:not(.name) { --side: inset 1px 0 var(--row-divider); }
+#server-list tbody td:first-child { --side: inset 1px 0 var(--ring); }
+#server-list tbody td:last-child {
+  box-shadow: inset 0 1px var(--ring), inset 0 -1px var(--ring), inset -1px 0 var(--ring), var(--side);
+}
+#server-list tbody tr[data-id] { cursor: pointer; }
+#server-list tbody tr[data-id]:focus-visible { outline: 2px solid var(--text-bright); outline-offset: -2px; }
+
+#server-list tbody tr[aria-selected="true"] td {
+  --ring: var(--gold);
+  background: linear-gradient(var(--selected-top), var(--selected));
+  color: var(--text-bright);
+}
+/* A hovered row keeps the grey outline even while selected (04). */
+#server-list tbody tr:hover td { --ring: var(--row-ring); }
+#server-list tbody tr:hover:not([aria-selected="true"]) td {
+  background: linear-gradient(var(--row-hover-top), var(--row-hover) 35%);
+}
+
 #server-list tbody td.name { text-align: left; }
 #server-list tbody td.official .icon { color: var(--official); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
-.chip { padding: 0 4px; background: #b9b9b9; color: #2a2a2a; font-size: 12px; }
+#server-list tbody td.password .icon { color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.chip {
+  padding: 0 5px;
+  background: var(--chip);
+  color: var(--chip-text);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
 
+/* Full rows show the player count in the toggle's amber; empty rows are dimmed. */
+#server-list tbody tr.full td.players { color: var(--on-text); }
+#server-list tbody tr.empty td { color: var(--text-muted); }
+#server-list tbody tr.empty .chip { opacity: 0.7; }
+
+/* Timer cell, in the slot where the game shows ping: exact is bright, ~estimate muted,
+   STARTING a gold label, unknown a dim dash. */
+#server-list tbody td.timer { font-variant-numeric: tabular-nums; white-space: nowrap; }
+#server-list tbody td.exact { color: var(--text-bright); }
+#server-list tbody td.estimate { color: var(--text-muted); }
+#server-list tbody td.starting { color: var(--starting); font-weight: 600; }
+#server-list tbody td.unknown { color: var(--timer-unknown); }
+#server-list tbody tr[aria-selected="true"] td.estimate { color: #d9cfb0; }
+#server-list tbody tr[aria-selected="true"] td.unknown { color: #b8ab8a; }
+
+/* Copy-join-code button on the selected row, styled like the game's Join Match button (04). */
+.join-btn {
+  float: right;
+  margin: 0 0 0 12px;
+  padding: 5px 14px;
+  background: linear-gradient(90deg, var(--join-from), var(--join-to));
+  border: 1px solid var(--gold);
+  color: var(--text-bright);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.join-btn::before { content: "▸ "; color: var(--gold); }
+.join-btn::after { content: " ◂"; color: var(--gold); }
+.join-btn:hover { background: linear-gradient(90deg, var(--join-to), var(--selected-top)); }
+
+/* Empty state: the header-only table frame plus a message naming the active filters (10). */
 #empty {
-  margin: 48px 0;
+  margin: 8px 0 0;
+  padding: 40px 16px;
+  border: 1px solid var(--divider);
   color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.06em;
   text-align: center;
+  text-transform: uppercase;
 }
 
 #bottom-bar {

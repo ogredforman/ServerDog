@@ -1,7 +1,7 @@
 // What the server list shows for the current prefs (SPEC §8 Browser UI, §11). Pure: callers
 // pass the data and `now` in Unix milliseconds.
 
-import { filterServers } from './filters.js';
+import { filterServers, isFull, isEmpty } from './filters.js';
 import { sortServers, freshStartsOrder } from './sort.js';
 import { regionName } from './regions.js';
 import { isStale } from './stale.js';
@@ -23,9 +23,12 @@ export function viewServers(servers, prefs, regions = []) {
 }
 
 // rowCells is what each cell in a server row shows, in header order: password and official
-// flags, the name with its ruleset chips, mode, map, players and the timer.
+// flags, the name with its ruleset chips, mode, map, players and the timer, plus the full /
+// empty flags that style the row.
 export function rowCells(server, now) {
   return {
+    full: isFull(server),
+    empty: isEmpty(server),
     password: Boolean(server.pw),
     official: server.t === 'o',
     name: server.n || server.id || '',

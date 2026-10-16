@@ -150,7 +150,7 @@ and unpredictability.
 
 - [x] **2.5b** Review the screenshots with the owner. Go through each file in `design/screenshots/` one at a time: the owner describes what it shows and how it behaves, and the agent asks about anything unclear (colors, states, interactions, region names, type-picker flow, which `02-type-picker` version is current). Record the result per screenshot in `design/screenshots/NOTES.md`. Update SPEC §11 and close the visual items in SPEC §13 from it. No code (SPEC §11, §13).
 - [x] **2.6** Style the page layout from the screenshots and `design/screenshots/NOTES.md`: overall frame, colors, typography (self-hosted Barlow with its OFL license in `internal/web/static/fonts/`), navbar, type picker, region selector modal with in-game display names (fallback to ID) and first-visit region guess, toggles, column headers and sort indicators (SPEC §11, §8 Browser UI, §5 Copy the game).
-- [ ] **2.7** Style the rows and states from the screenshots and NOTES.md:
+- [x] **2.7** Style the rows and states from the screenshots and NOTES.md:
   - full / empty / password / ruleset looks;
   - hover / selected, with the gold copy-join-code button on the selected row;
   - timer, STARTING and muted `~` estimate styling;

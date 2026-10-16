@@ -19,6 +19,8 @@ if (!hasSavedPrefs(localStorage)) {
 }
 let data = null;
 let offset = 0;
+// Join code of the selected row; in memory only, kept across data refreshes.
+let selectedId = null;
 
 const now = () => Date.now() + offset;
 const panel = $('#list-panel');
@@ -91,6 +93,14 @@ function renderRow(server, t) {
   if (server.ms != null) timer.dataset.ms = server.ms;
   if (server.st != null) timer.dataset.st = server.st;
   const tr = document.createElement('tr');
+  tr.classList.toggle('full', c.full);
+  tr.classList.toggle('empty', c.empty);
+  tr.classList.toggle('pw', c.password);
+  // Only rows with a join code can be selected: the selected row's button copies it.
+  if (server.id) {
+    tr.dataset.id = server.id;
+    tr.tabIndex = 0;
+  }
   tr.append(
     cell('password', ...(c.password ? [icon('icon-lock')] : [])),
     cell('official', ...(c.official ? [icon('icon-shield')] : [])),
@@ -100,7 +110,26 @@ function renderRow(server, t) {
     cell('players', c.players),
     timer,
   );
+  if (server.id && server.id === selectedId) select(tr);
   return tr;
+}
+
+// select marks tr as the selected row and gives it the gold copy-join-code button; a null tr
+// just clears the current selection.
+function select(tr) {
+  const old = document.querySelector('#server-list tr[aria-selected="true"]');
+  if (old) {
+    old.removeAttribute('aria-selected');
+    old.querySelector('.join-btn')?.remove();
+  }
+  selectedId = tr ? tr.dataset.id : null;
+  if (!tr) return;
+  tr.setAttribute('aria-selected', 'true');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'join-btn';
+  btn.textContent = 'Copy join code';
+  tr.querySelector('td.name').prepend(btn);
 }
 
 function renderStale() {
@@ -149,6 +178,8 @@ function render() {
   const t = now();
   observer.disconnect();
   visible.clear();
+  // A selected server that is no longer shown loses its selection.
+  if (!rows.some((s) => s.id && s.id === selectedId)) selectedId = null;
   $('#server-list tbody').replaceChildren(...rows.map((s) => renderRow(s, t)));
   for (const td of document.querySelectorAll('#server-list td.exact, #server-list td.estimate')) {
     observer.observe(td);
@@ -186,6 +217,19 @@ function bind() {
       setPrefs({ freshStarts: false, sort });
     });
   }
+
+  // Clicking a row selects it (no re-render); clicking the selected row again clears it.
+  $('#server-list tbody').addEventListener('click', (e) => {
+    if (e.target.closest('.join-btn')) return;
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    select(tr.dataset.id === selectedId ? null : tr);
+  });
+  $('#server-list tbody').addEventListener('keydown', (e) => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.target.tagName !== 'TR' || !e.target.dataset.id) return;
+    e.preventDefault();
+    select(e.target.dataset.id === selectedId ? null : e.target);
+  });
 
   const modal = $('#region-modal');
   $('#region-open').addEventListener('click', () => modal.showModal());
