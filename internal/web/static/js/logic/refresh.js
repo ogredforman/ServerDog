@@ -66,8 +66,13 @@ export function createRefresher({ url, fetch, now, setTimeout, clearTimeout, ran
     }
     current = result.data;
     attempt = 0;
-    schedule(freshDelay(current.nextUpdateAt, now(), random));
-    onData(current, result.dateHeader);
+    // onData runs first so a clock offset it applies from the Date header counts toward the
+    // next delay; the schedule still happens if it throws, unless it stopped the refresher.
+    try {
+      onData(current, result.dateHeader);
+    } finally {
+      if (live()) schedule(freshDelay(current.nextUpdateAt, now(), random));
+    }
   }
 
   return {

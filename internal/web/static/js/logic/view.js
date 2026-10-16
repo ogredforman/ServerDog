@@ -2,10 +2,12 @@
 // pass the data and `now` in Unix milliseconds.
 
 import { filterServers } from './filters.js';
-import { sortServers } from './sort.js';
-import { formatTimer } from './timer.js';
+import { sortServers, freshStartsOrder } from './sort.js';
+import { isStale } from './stale.js';
+import { formatDuration, formatTimer } from './timer.js';
 
-// viewServers filters then sorts servers for prefs. Saved regions that aren't in the data
+// viewServers filters then sorts servers for prefs: the Fresh Starts order when
+// prefs.freshStarts is on, the column sort otherwise. Saved regions that aren't in the data
 // are ignored, so a region that has gone away doesn't hide everything.
 export function viewServers(servers, prefs, regions = []) {
   const present = new Set(regions);
@@ -16,7 +18,7 @@ export function viewServers(servers, prefs, regions = []) {
     showFull: prefs.showFull,
     showEmpty: prefs.showEmpty,
   });
-  return sortServers(shown, prefs.sort);
+  return prefs.freshStarts ? freshStartsOrder(shown) : sortServers(shown, prefs.sort);
 }
 
 // rowCells is the text of each cell in a server row.
@@ -43,4 +45,11 @@ export function activeFilters(prefs, regions = []) {
   if (!prefs.showFull) out.push('Hiding full');
   if (!prefs.showEmpty) out.push('Hiding empty');
   return out;
+}
+
+// staleNotice is the navbar notice text when the data is stale (SPEC §7.5 step 5), or null.
+export function staleNotice(data, now) {
+  if (!isStale(data, now)) return null;
+  if (!Number.isFinite(data.generatedAt)) return 'Server data may be out of date.';
+  return `Server data may be out of date (last updated ${formatDuration(now / 1000 - data.generatedAt)} ago).`;
 }

@@ -22,12 +22,12 @@ test('loadPrefs', () => {
     { name: 'not an object', raw: '42', want: DEFAULT_PREFS },
     {
       name: 'all valid',
-      raw: JSON.stringify({ type: 'c', regions: ['eu', 'na'], showFull: false, showEmpty: false, sort: { column: 'timer', dir: 'desc' } }),
-      want: { type: 'c', regions: ['eu', 'na'], showFull: false, showEmpty: false, sort: { column: 'timer', dir: 'desc' } },
+      raw: JSON.stringify({ type: 'c', regions: ['eu', 'na'], showFull: false, showEmpty: false, sort: { column: 'timer', dir: 'desc' }, freshStarts: true }),
+      want: { type: 'c', regions: ['eu', 'na'], showFull: false, showEmpty: false, sort: { column: 'timer', dir: 'desc' }, freshStarts: true },
     },
     {
       name: 'invalid fields fall back one by one',
-      raw: JSON.stringify({ type: 'x', regions: ['eu', 3, 'eu'], showFull: 'no', showEmpty: false, sort: { column: 'bogus', dir: 'asc' } }),
+      raw: JSON.stringify({ type: 'x', regions: ['eu', 3, 'eu'], showFull: 'no', showEmpty: false, sort: { column: 'bogus', dir: 'asc' }, freshStarts: 'yes' }),
       want: { ...DEFAULT_PREFS, regions: ['eu'], showEmpty: false },
     },
     {
@@ -51,7 +51,7 @@ test('loadPrefs returns a fresh object each time', () => {
 
 test('savePrefs round-trips and ignores storage errors', () => {
   const storage = memStorage();
-  const prefs = { type: 'o', regions: ['as'], showFull: false, showEmpty: true, sort: { column: 'map', dir: 'desc' } };
+  const prefs = { type: 'o', regions: ['as'], showFull: false, showEmpty: true, sort: { column: 'map', dir: 'desc' }, freshStarts: true };
   savePrefs(storage, prefs);
   assert.deepEqual(loadPrefs(storage), prefs);
   assert.doesNotThrow(() => savePrefs(throwing, prefs));

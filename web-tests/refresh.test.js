@@ -149,3 +149,38 @@ test('restart while a fetch is in flight keeps one fetch chain', async () => {
   assert.deepEqual(h.loaded.map(([g]) => g), [1200]);
   assert.equal(h.delays.length, 1);
 });
+
+test('next delay uses the clock as onData leaves it', async () => {
+  let offset = 0;
+  const delays = [];
+  const r = createRefresher({
+    url: '/data/servers.json',
+    fetch: async () => ok(data(1000)),
+    now: () => 1000_000 + offset,
+    random: () => 0,
+    setTimeout: (fn, ms) => delays.push(ms),
+    clearTimeout: () => {},
+    onData: () => {
+      offset = -60_000; // local clock found to be a minute fast
+    },
+  });
+  r.start();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(delays, [240_000]);
+});
+
+test('onData stopping the refresher schedules nothing', async () => {
+  const delays = [];
+  const r = createRefresher({
+    url: '/data/servers.json',
+    fetch: async () => ok(data(1000)),
+    now: () => 1000_000,
+    random: () => 0,
+    setTimeout: (fn, ms) => delays.push(ms),
+    clearTimeout: () => {},
+    onData: () => r.stop(),
+  });
+  r.start();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(delays, []);
+});

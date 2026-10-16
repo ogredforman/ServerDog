@@ -1,5 +1,5 @@
-// Saved browser choices: type, regions, Show Full / Show Empty and sort (SPEC §7.5 step 1,
-// §8 Browser UI). Pure: callers pass the storage (localStorage or a stand-in).
+// Saved browser choices: type, regions, Show Full / Show Empty, sort and Find Fresh Starts
+// (SPEC §7.5 steps 1 and 6, §8 Browser UI). Pure: callers pass the storage (localStorage or a stand-in).
 
 import { sortColumns } from './sort.js';
 
@@ -12,6 +12,7 @@ export const DEFAULT_PREFS = Object.freeze({
   showFull: true,
   showEmpty: true,
   sort: { column: 'name', dir: 'asc' },
+  freshStarts: false, // when on, the Fresh Starts order replaces the column sort
 });
 
 const defaults = () => ({ ...DEFAULT_PREFS, regions: [], sort: { ...DEFAULT_PREFS.sort } });
@@ -31,6 +32,7 @@ export function loadPrefs(storage) {
   if (Array.isArray(saved.regions)) prefs.regions = [...new Set(saved.regions.filter((r) => typeof r === 'string'))];
   if (typeof saved.showFull === 'boolean') prefs.showFull = saved.showFull;
   if (typeof saved.showEmpty === 'boolean') prefs.showEmpty = saved.showEmpty;
+  if (typeof saved.freshStarts === 'boolean') prefs.freshStarts = saved.freshStarts;
   const sort = saved.sort;
   if (sort && sortColumns.includes(sort.column) && (sort.dir === 'asc' || sort.dir === 'desc')) {
     prefs.sort = { column: sort.column, dir: sort.dir };

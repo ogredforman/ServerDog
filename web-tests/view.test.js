@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { viewServers, rowCells, activeFilters } from '../internal/web/static/js/logic/view.js';
+import { viewServers, rowCells, activeFilters, staleNotice } from '../internal/web/static/js/logic/view.js';
 import { DEFAULT_PREFS } from '../internal/web/static/js/logic/prefs.js';
 
 const servers = [
@@ -60,5 +60,33 @@ test('activeFilters', () => {
   ];
   for (const c of cases) {
     assert.deepEqual(activeFilters(c.prefs, regions), c.want);
+  }
+});
+
+test('viewServers uses the Fresh Starts order and keeps every server', () => {
+  const list = [
+    { id: 'u', n: 'Unknown', t: 'o', r: 'eu', p: 4, mp: 10, ms: null, st: 'unknown' },
+    { id: 'e', n: 'Estimate', t: 'o', r: 'eu', p: 4, mp: 10, ms: 900, st: 'estimate' },
+    { id: 'old', n: 'Old', t: 'o', r: 'eu', p: 4, mp: 10, ms: 100, st: 'exact' },
+    { id: 'new', n: 'New', t: 'o', r: 'eu', p: 4, mp: 10, ms: 500, st: 'exact' },
+    { id: 's', n: 'Starting', t: 'o', r: 'eu', p: 4, mp: 10, ms: 50, st: 'starting' },
+  ];
+  const sort = { column: 'name', dir: 'asc' };
+  assert.deepEqual(ids(viewServers(list, prefs({ sort, freshStarts: true }), regions)), ['s', 'new', 'old', 'e', 'u']);
+  assert.deepEqual(ids(viewServers(list, prefs({ sort, freshStarts: false }), regions)), ['e', 'new', 'old', 's', 'u']);
+});
+
+test('staleNotice', () => {
+  const now = 1_800_000_000_000;
+  const at = now / 1000;
+  const cases = [
+    { name: 'fresh', data: { generatedAt: at - 30, refreshSeconds: 60, stale: false }, want: null },
+    { name: 'just under the limit', data: { generatedAt: at - 180, refreshSeconds: 60, stale: false }, want: null },
+    { name: 'too old', data: { generatedAt: at - 185, refreshSeconds: 60, stale: false }, want: 'Server data may be out of date (last updated 3:05 ago).' },
+    { name: 'flagged by the server', data: { generatedAt: at - 30, refreshSeconds: 60, stale: true }, want: 'Server data may be out of date (last updated 0:30 ago).' },
+    { name: 'malformed times', data: { refreshSeconds: 60 }, want: 'Server data may be out of date.' },
+  ];
+  for (const c of cases) {
+    assert.equal(staleNotice(c.data, now), c.want, c.name);
   }
 });

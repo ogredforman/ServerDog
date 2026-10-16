@@ -103,7 +103,7 @@ and unpredictability.
   - server list rows.
 
   Type, regions, toggles and sort are saved to localStorage. Changing them re-renders without network requests and keeps scroll position (SPEC §7.5 steps 1–3, §8 Browser UI).
-- [ ] **1.12** Add the live behavior to the page:
+- [x] **1.12** Add the live behavior to the page:
   - one shared 1s ticker that updates only visible timer cells in place;
   - the Find Fresh Starts button (active state; a column click goes back to normal sort);
   - the refresh scheduler hooked to re-render while keeping sort, filters and scroll;
