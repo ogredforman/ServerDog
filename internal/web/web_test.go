@@ -1,10 +1,13 @@
 package web
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +51,9 @@ func TestHandler(t *testing.T) {
 		{"data POST", true, http.MethodPost, "/data/servers.json", http.StatusNotFound, "no-store", "", ""},
 		{"js asset", false, http.MethodGet, "/js/logic/timer.js", http.StatusOK, "public, max-age=60, s-maxage=300", "text/javascript; charset=utf-8", "export function formatTimer"},
 		{"js app HEAD", false, http.MethodHead, "/js/app.js", http.StatusOK, "public, max-age=60, s-maxage=300", "text/javascript; charset=utf-8", ""},
+		{"js asset stale version", false, http.MethodGet, "/js/logic/timer.js?v=000000000000", http.StatusOK, "public, max-age=60, s-maxage=300", "text/javascript; charset=utf-8", "export function formatTimer"},
+		{"healthz before first publish", false, http.MethodGet, "/healthz", http.StatusOK, "no-store", "application/json", `{"snapshotAgeSeconds":null,"stale":false}`},
+		{"healthz POST", false, http.MethodPost, "/healthz", http.StatusNotFound, "no-store", "", ""},
 		{"missing js asset", false, http.MethodGet, "/js/nope.js", http.StatusNotFound, "no-store", "", ""},
 		{"js directory", false, http.MethodGet, "/js/logic/", http.StatusNotFound, "no-store", "", ""},
 		{"js unknown type", false, http.MethodGet, "/js/logic", http.StatusNotFound, "no-store", "", ""},
@@ -116,5 +122,89 @@ func TestDataMissingAfterPublish(t *testing.T) {
 	s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/data/servers.json", nil))
 	if rec.Code != http.StatusNotFound || rec.Header().Get("Cache-Control") != "no-store" {
 		t.Errorf("got %d %q, want 404 no-store", rec.Code, rec.Header().Get("Cache-Control"))
+	}
+}
+
+// assetRef matches a versioned asset URL in the served index.html.
+var assetRef = regexp.MustCompile(`(/js/[A-Za-z0-9_./-]+)\?v=([0-9a-f]+)`)
+
+func TestVersionedAssets(t *testing.T) {
+	s, _ := newSite(t, `{}`)
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	index := rec.Body.String()
+
+	if strings.Contains(index, importMapMarker) {
+		t.Error("index.html still contains the import map marker")
+	}
+	for _, want := range []string{`<script type="importmap">`, `src="/js/app.js?v=`, `"/js/logic/view.js":"/js/logic/view.js?v=`} {
+		if !strings.Contains(index, want) {
+			t.Errorf("index.html does not contain %q", want)
+		}
+	}
+
+	// Every module, including ones only imported by other modules, is in the import map.
+	refs := map[string]string{}
+	for _, m := range assetRef.FindAllStringSubmatch(index, -1) {
+		refs[m[1]] = m[2]
+	}
+	for _, url := range []string{"/js/app.js", "/js/logic/timer.js", "/js/logic/filters.js", "/js/logic/sort.js", "/js/logic/stale.js", "/js/logic/clock.js", "/js/logic/refresh.js", "/js/logic/prefs.js", "/js/logic/view.js"} {
+		if _, ok := refs[url]; !ok {
+			t.Errorf("index.html has no versioned URL for %s", url)
+		}
+	}
+
+	// Each versioned URL serves content matching its hash, cached as immutable.
+	for url, v := range refs {
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url+"?v="+v, nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("%s?v=%s: status %d", url, v, rec.Code)
+			continue
+		}
+		if got := rec.Header().Get("Cache-Control"); got != "public, max-age=31536000, immutable" {
+			t.Errorf("%s?v=%s: Cache-Control = %q", url, v, got)
+		}
+		sum := sha256.Sum256(rec.Body.Bytes())
+		if !strings.HasPrefix(hex.EncodeToString(sum[:]), v) {
+			t.Errorf("%s?v=%s: hash does not match served content", url, v)
+		}
+	}
+}
+
+func TestVersionIndexMissingMarker(t *testing.T) {
+	if _, err := versionIndex([]byte(`<script type="module" src="/js/app.js"></script>`), map[string]string{"static/js/app.js": "abc"}); err == nil {
+		t.Error("versionIndex without the marker: want error")
+	}
+}
+
+func TestHealthz(t *testing.T) {
+	tests := []struct {
+		name    string
+		elapsed time.Duration // fake clock advance after publish
+		stale   bool
+		want    string
+	}{
+		{"fresh", 0, false, `{"snapshotAgeSeconds":20,"stale":false}`},
+		{"ages with the clock", 95500 * time.Millisecond, false, `{"snapshotAgeSeconds":115,"stale":false}`},
+		{"stale publish", 10 * time.Minute, true, `{"snapshotAgeSeconds":620,"stale":true}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, clk := newSite(t, `{}`)
+			s.Published(publish.File{SnapshotAt: t0.Add(-20 * time.Second).Unix(), NextUpdateAt: t0.Add(40 * time.Second).Unix(), RefreshSeconds: 60, Stale: tt.stale})
+			clk.Advance(tt.elapsed)
+			rec := httptest.NewRecorder()
+			s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+			if rec.Code != http.StatusOK {
+				t.Errorf("status = %d, want 200", rec.Code)
+			}
+			if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+				t.Errorf("Cache-Control = %q, want no-store", got)
+			}
+			if got := rec.Body.String(); got != tt.want {
+				t.Errorf("body = %s, want %s", got, tt.want)
+			}
+		})
 	}
 }
