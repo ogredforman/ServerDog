@@ -1,8 +1,8 @@
 // Region display names in game order, and the first-visit region guess (SPEC §11 Region
 // selector, design/screenshots/NOTES.md 03). Pure: callers pass the time zone.
 
-// REGIONS lists [provider ID, in-game display name] in the game's order. South Africa is left
-// out until the provider polls it.
+// REGIONS lists [provider ID, in-game display name] in the game's order. The provider doesn't
+// poll South Africa yet; its ID is assumed.
 export const REGIONS = Object.freeze([
   ['eu-central', 'Europe (Central)'],
   ['eu-east', 'Europe (East)'],
@@ -17,6 +17,7 @@ export const REGIONS = Object.freeze([
   ['asia-west', 'Asia (West)'],
   ['asia-se', 'Asia (South East)'],
   ['oceania', 'Oceania'],
+  ['south-africa', 'South Africa'],
 ]);
 
 const names = new Map(REGIONS);
@@ -36,6 +37,20 @@ export function regionList(ids) {
   known.sort((a, b) => order.get(a) - order.get(b));
   unknown.sort();
   return [...known, ...unknown].map((id) => ({ id, name: regionName(id) }));
+}
+
+// selectorRegions is what the region selector lists: every known region in game order, whether
+// or not it has servers right now, then unknown IDs from the data alphabetically.
+export function selectorRegions(dataIds) {
+  return regionList([...REGIONS.map(([id]) => id), ...dataIds]);
+}
+
+// chosenRegions keeps the saved region IDs that still mean something: known regions (even with
+// no servers right now) and IDs in the data. Others are ignored, so a region that has gone away
+// doesn't hide everything.
+export function chosenRegions(saved, dataIds) {
+  const present = new Set(dataIds);
+  return saved.filter((id) => order.has(id) || present.has(id));
 }
 
 // Exact IANA zones checked before the prefix rules below.

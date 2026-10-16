@@ -4,7 +4,7 @@
 import { clockOffset } from './logic/clock.js';
 import { loadPrefs, savePrefs, hasSavedPrefs, nextSort } from './logic/prefs.js';
 import { createRefresher } from './logic/refresh.js';
-import { regionList, guessRegion } from './logic/regions.js';
+import { selectorRegions, chosenRegions, guessRegion } from './logic/regions.js';
 import { formatTimer } from './logic/timer.js';
 import { viewServers, rowCells, sortIndicator, activeFilters, staleNotice } from './logic/view.js';
 
@@ -42,12 +42,13 @@ function setPrefs(change) {
 
 let shownRegions = '';
 
-// renderRegions rebuilds the region modal's list only when the data's region list changed.
+// renderRegions rebuilds the region modal's list (every known region, then unknown IDs from the
+// data) only when the data's region list changed.
 function renderRegions() {
   const key = data.regions.join('\n');
   if (key === shownRegions) return;
   shownRegions = key;
-  const rows = regionList(data.regions).map(({ id, name }) => {
+  const rows = selectorRegions(data.regions).map(({ id, name }) => {
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.value = id;
@@ -147,8 +148,7 @@ function renderHeaders() {
 }
 
 function renderRegionState() {
-  const present = new Set(data.regions);
-  const chosen = new Set(prefs.regions.filter((r) => present.has(r)));
+  const chosen = new Set(chosenRegions(prefs.regions, data.regions));
   for (const input of document.querySelectorAll('#region-list input')) input.checked = chosen.has(input.value);
   $('#region-count').textContent = chosen.size;
   $('#region-modal-count').textContent = chosen.size;
@@ -235,7 +235,7 @@ function bind() {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.close();
   });
-  // Each checkbox applies at once (no Confirm). Saved regions missing from the data are kept.
+  // Each checkbox applies at once (no Confirm). Saved regions that aren't listed are kept.
   $('#region-list').addEventListener('change', (e) => {
     const id = e.target.value;
     const rest = prefs.regions.filter((r) => r !== id);

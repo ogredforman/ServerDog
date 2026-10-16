@@ -94,15 +94,17 @@ Region selection modal, opened from `REGION [n/3]`; first shot scrolled to the t
   | Asia (West) | `asia-west` |
   | Asia (South East) | `asia-se` |
   | Oceania | `oceania` |
-  | South Africa | none (the provider doesn't poll it) |
+  | South Africa | `south-africa` (assumed; the provider doesn't poll it yet) |
 
 - ServerDog:
   - Title `SELECT REGION [n]`, no max.
   - **Applies each click immediately**; no `CONFIRM`.
   - **No limit of 3:** any number of regions. The button shows the selected count without a max.
   - **Drop:** ping, the "automatically pick" checkbox and the modal's `REFRESH`.
-  - **Region list:** regions in game order with game display names. An unknown ID falls back to
-    the raw ID, listed after the known ones. South Africa is omitted until the provider has it.
+  - **Region list:** every in-game region in game order with game display names, even when it
+    has no servers right now. An unknown ID from the data falls back to the raw ID, listed after
+    the known ones. South Africa is listed (last) with the assumed ID `south-africa`; the provider
+    doesn't poll it yet, so picking it shows the empty state.
   - **First visit** (nothing saved): preselect the region nearest the visitor if it can be
     worked out without a network request or permission prompt (e.g. from the browser's time
     zone). Otherwise select no region, which means all regions are shown.

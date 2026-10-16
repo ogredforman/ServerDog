@@ -159,7 +159,7 @@ and unpredictability.
 
   Check the 16 ms budget for the 1s tick and a 4,000-row re-sort (SPEC §8 Browser UI, §9 Client performance, §11).
 - [x] **2.7b** Show the gold copy-join-code button on every row that has a join code, not only the selected row, centered in its own last column after Timer (no header label, not sortable). Rows without a join code leave the cell empty. Row selection (gold row) stays, separate from the button. Update SPEC §11 ("The selected row gets…" → every row) and NOTES 04's ServerDog line. Re-check the 16 ms budget with the extra cell (SPEC §8 Browser UI, §9 Client performance, §11).
-- [ ] **2.7c** Make the region selector list every in-game region, named as in-game (`03-regionselector-*`), whether or not it has servers right now:
+- [x] **2.7c** Make the region selector list every in-game region, named as in-game (`03-regionselector-*`), whether or not it has servers right now:
   - the modal always lists all `REGIONS` in game order, then any unknown IDs from `servers.json` `regions`; today it lists only regions that currently have servers, so empty regions disappear;
   - add South Africa (`SOUTH AFRICA`, last) with the assumed ID `south-africa`. The provider doesn't poll it yet, so picking it shows the empty state;
   - a chosen region that is known (in `REGIONS`) filters even when it has no servers right now; only saved IDs that are neither known nor in the data are ignored (`viewServers`, `activeFilters`, region count);

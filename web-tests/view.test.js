@@ -22,6 +22,8 @@ test('viewServers filters then sorts', () => {
     { name: 'region gone from data is ignored', prefs: prefs({ regions: ['as'] }), want: ['b', 'a', 'd'] },
     { name: 'gone region dropped, present kept', prefs: prefs({ regions: ['as', 'na'] }), want: ['b'] },
     { name: 'community', prefs: prefs({ type: 'c' }), want: ['c'] },
+    { name: 'known region with no servers filters to nothing', prefs: prefs({ regions: ['south-africa'] }), want: [] },
+    { name: 'known empty region kept beside a present one', prefs: prefs({ regions: ['eu-west', 'na'] }), want: ['b'] },
   ];
   for (const c of cases) {
     assert.deepEqual(ids(viewServers(servers, c.prefs, regions)), c.want, c.name);
@@ -63,6 +65,7 @@ test('activeFilters', () => {
     { prefs: prefs(), want: ['Official'] },
     { prefs: prefs({ type: 'c', regions: ['eu', 'as'], showFull: false, showEmpty: false }), want: ['Community', 'Regions: eu', 'Hiding full', 'Hiding empty'] },
     { prefs: prefs({ regions: ['na-east', 'eu-west'] }), regions: ['eu-west', 'na-east'], want: ['Official', 'Regions: North America (East), Europe (West)'] },
+    { prefs: prefs({ regions: ['south-africa', 'gone'] }), regions: ['na-east'], want: ['Official', 'Regions: South Africa'] },
   ];
   for (const c of cases) {
     assert.deepEqual(activeFilters(c.prefs, c.regions ?? regions), c.want);

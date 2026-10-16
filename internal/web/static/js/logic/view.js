@@ -3,16 +3,15 @@
 
 import { filterServers, isFull, isEmpty } from './filters.js';
 import { sortServers, freshStartsOrder } from './sort.js';
-import { regionName } from './regions.js';
+import { regionName, chosenRegions } from './regions.js';
 import { isStale } from './stale.js';
 import { formatDuration, formatTimer } from './timer.js';
 
 // viewServers filters then sorts servers for prefs: the Fresh Starts order when
-// prefs.freshStarts is on, the column sort otherwise. Saved regions that aren't in the data
-// are ignored, so a region that has gone away doesn't hide everything.
+// prefs.freshStarts is on, the column sort otherwise. Saved regions are kept as chosenRegions
+// says: a known region with no servers right now shows nothing.
 export function viewServers(servers, prefs, regions = []) {
-  const present = new Set(regions);
-  const chosen = prefs.regions.filter((r) => present.has(r));
+  const chosen = chosenRegions(prefs.regions, regions);
   const shown = filterServers(servers, {
     type: prefs.type,
     regions: chosen,
@@ -51,8 +50,7 @@ const typeNames = { o: 'Official', c: 'Community' };
 
 // activeFilters lists the filters in effect, for the empty state.
 export function activeFilters(prefs, regions = []) {
-  const present = new Set(regions);
-  const chosen = prefs.regions.filter((r) => present.has(r));
+  const chosen = chosenRegions(prefs.regions, regions);
   const out = [];
   if (prefs.type) out.push(typeNames[prefs.type] || prefs.type);
   if (chosen.length > 0) out.push(`Regions: ${chosen.map(regionName).join(', ')}`);

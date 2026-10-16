@@ -20,8 +20,12 @@ const WorldRefresh = 60 * time.Second
 var worldEpoch = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 var (
-	worldRegions = []string{"na-east", "na-west", "sa", "eu-west", "eu-central", "asia", "oceania"}
-	worldMaps    = []source.Map{
+	// The provider's region IDs (meta.requestedRegions).
+	worldRegions = []string{
+		"asia-east", "asia-se", "asia-west", "eu-central", "eu-east", "eu-south", "eu-west",
+		"na-central", "na-east", "na-north", "na-west", "oceania", "south-america",
+	}
+	worldMaps = []source.Map{
 		{Variant: "Harbor", Base: "Harbor"}, {Variant: "Harbor Night", Base: "Harbor"},
 		{Variant: "Quarry", Base: "Quarry"}, {Variant: "Quarry Storm", Base: "Quarry"},
 		{Variant: "Outpost", Base: "Outpost"}, {Variant: "Rail Yard", Base: "Rail Yard"},
