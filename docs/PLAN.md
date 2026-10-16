@@ -4,7 +4,7 @@
 > *scope per stage*, and *exit criteria*. Each stage ends in a runnable, usable state. Don't pull
 > later-stage work forward.
 
-**Current stage: Stage 1 — Prototype (fakes, no real external dependencies)**
+**Current stage: Stage 2 — MVP (real integrations, actually usable)**
 
 Task IDs are `<stage>.<task>` (e.g. `1.5`). A stage inserted between two others gets a dotted ID
 (Stage `1.5`, tasks `1.5.1`, ...), and a task inserted after another gets a letter (`1.5.13b`).
