@@ -47,20 +47,46 @@ For each of `servers.dog` and `redforman.dev`:
    servers.dog is new, so it probably has no records yet. Add `A @ <droplet IP>` (proxied) and
    `CNAME www servers.dog` (proxied).
 5. Cloudflare then shows **two nameservers** (like `ada.ns.cloudflare.com`). Keep that page
-   open; step 4 uses them. Don't change nameservers yet.
+   open; step 3 uses them.
 
-## 3. Create the Origin Certificates
+## 3. Switch the nameservers
 
-Do this before switching nameservers, so Apache is ready when traffic arrives.
+Cloudflare can only issue Origin Certificates (step 4) once a domain is **Active**, so switch
+the nameservers first. Before you do, set each domain's **SSL/TLS → Overview** encryption mode to
+**Full (strict)** (step 5 explains why). Otherwise Cloudflare may start in "Flexible", which
+sends redforman.dev into a redirect loop while its Apache redirects HTTP to HTTPS.
 
-For each domain: **SSL/TLS → Origin Server → Create Certificate**.
+At each domain's registrar:
 
-Origin Certificates belong to one zone. Open the domain's own zone first (pick it on the account
-home page), then go to SSL/TLS. Its hostnames must be in that zone: from the servers.dog zone you
-can't create a `redforman.dev` certificate. If Cloudflare says the zone "is not part of your
-account", you're in the wrong zone, or the domain hasn't been added yet (step 2). redforman.dev's
-certificate can also wait until after step 4, because it keeps its Let's Encrypt certificate
-until then (step 6).
+1. If **DNSSEC** is on at the registrar, turn it off first and wait for the DS record to
+   disappear (it can take a few hours). Switching nameservers with an old DS record in place
+   makes the domain unreachable.
+2. Replace the registrar's nameservers with the two Cloudflare gave you in step 2.
+3. Back in Cloudflare, click **Check nameservers**. The domain turns **Active**, usually within
+   an hour (up to 24h). Cloudflare emails you when it does.
+
+When it's Active, turn DNSSEC back on through Cloudflare: **DNS → Settings → Enable DNSSEC**,
+then add the DS record it shows at your registrar.
+
+- **redforman.dev** keeps working throughout. Visitors reach the droplet either directly (old
+  nameservers) or through Cloudflare (new ones), both end at the same Apache, and its Let's
+  Encrypt certificate satisfies Full (strict).
+- **servers.dog** shows a Cloudflare error page until its Origin Certificate and Apache site are
+  in place (step 4). It's a new domain with no visitors yet, so that's harmless.
+
+## 4. Create the Origin Certificates
+
+For each domain, once it's **Active**: open the domain's own zone (pick it on the account home
+page), then **SSL/TLS → Origin Server → Create Certificate**. Hostnames must belong to that zone:
+from the servers.dog zone you can't create a `redforman.dev` certificate.
+
+If Cloudflare says the zone "is either not part of your account or you don't have access":
+
+- the domain isn't **Active** yet (the account home page still shows it as pending): finish
+  step 3 and wait; or
+- your user lacks API access, which Origin CA needs: check **Manage Account → Members**.
+
+Then:
 
 - Key type: **RSA (2048)**.
 - Hostnames: `servers.dog, *.servers.dog` (or `redforman.dev, *.redforman.dev`).
@@ -83,24 +109,7 @@ browsers only ever talk to Cloudflare.
 
 - **servers.dog:** now install ServerDog and its Apache site (DEPLOY.md steps 1–5). They
   already point at `/etc/ssl/cloudflare/servers.dog.pem` and `.key`.
-- **redforman.dev:** see step 6. You can keep its existing Let's Encrypt certificate for now.
-
-## 4. Switch the nameservers
-
-At each domain's registrar:
-
-1. If **DNSSEC** is on at the registrar, turn it off first and wait for the DS record to
-   disappear (it can take a few hours). Switching nameservers with an old DS record in place
-   makes the domain unreachable.
-2. Replace the registrar's nameservers with the two Cloudflare gave you in step 2.
-3. Back in Cloudflare, click **Check nameservers**. The domain turns **Active**, usually within
-   an hour (up to 24h). Cloudflare emails you when it does.
-
-When it's Active, turn DNSSEC back on through Cloudflare: **DNS → Settings → Enable DNSSEC**,
-then add the DS record it shows at your registrar.
-
-The site keeps working throughout. Visitors reach the droplet either directly (old
-nameservers) or through Cloudflare (new ones), and both paths end at the same Apache.
+- **redforman.dev:** optional; see step 6. Its Let's Encrypt certificate keeps working.
 
 ## 5. SSL/TLS settings (both domains)
 
@@ -123,7 +132,7 @@ The portfolio app doesn't need to change. Things to know:
 
 - **Certificate.** Its current Let's Encrypt certificate keeps working under Full (strict), and
   certbot renewals still work through Cloudflare. To drop certbot, point redforman.dev's Apache
-  site at the Origin Certificate from step 3:
+  site at the Origin Certificate from step 4:
 
   ```apache
   SSLCertificateFile    /etc/ssl/cloudflare/redforman.dev.pem

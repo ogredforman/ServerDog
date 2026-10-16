@@ -17,9 +17,10 @@ visitor ──HTTPS──▶ Cloudflare (cache) ──HTTPS──▶ Apache :443
 Putting the domains behind Cloudflare is its own tutorial, [CLOUDFLARE.md](CLOUDFLARE.md). It
 covers servers.dog and redforman.dev and the firewall they share. Do the steps in this order:
 
-1. CLOUDFLARE.md steps 1–3: add both domains to Cloudflare and create the Origin Certificates.
+1. CLOUDFLARE.md steps 1–4: add both domains to Cloudflare, switch nameservers, and create the
+   Origin Certificates once the domains are Active.
 2. This file, steps 1–5: install ServerDog and its Apache site.
-3. CLOUDFLARE.md steps 4–9: switch nameservers, set SSL, firewall, caching, verify.
+3. CLOUDFLARE.md steps 5–9: SSL settings, firewall, caching, verify.
 
 Commands below assume Ubuntu with Apache already serving redforman.dev, run as a sudo user.
 
@@ -84,7 +85,7 @@ curl -s http://127.0.0.1:8080/healthz # {"snapshotAgeSeconds":..., "stale":false
 
 ## 4. Origin Certificate
 
-Create it and save it as `/etc/ssl/cloudflare/servers.dog.pem` and `.key` (CLOUDFLARE.md step 3).
+Create it and save it as `/etc/ssl/cloudflare/servers.dog.pem` and `.key` (CLOUDFLARE.md step 4).
 Apache reads the key as root before dropping privileges, so `0600 root` is enough.
 
 ## 5. Apache site
@@ -105,7 +106,7 @@ curl -skI --resolve servers.dog:443:127.0.0.1 https://servers.dog/ | grep -i cac
 # cache-control: public, max-age=60, s-maxage=300
 ```
 
-Now continue with CLOUDFLARE.md step 4.
+Now continue with CLOUDFLARE.md step 5.
 
 ## Routine deploys
 
