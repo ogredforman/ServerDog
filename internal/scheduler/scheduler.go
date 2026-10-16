@@ -24,6 +24,9 @@ type Options struct {
 
 	// Publish stores one built servers.json, e.g. with publish.Write. Required.
 	Publish func(ctx context.Context, f publish.File) error
+	// Save stores the tracker after each cycle, e.g. with (*tracker.Tracker).SaveFile. Its ctx is
+	// not canceled on shutdown, so the last cycle is saved too. Optional.
+	Save func(ctx context.Context) error
 	// Logger receives per-cycle and failure logs. Nil means slog.Default().
 	Logger *slog.Logger
 }
@@ -122,7 +125,7 @@ func (s *Scheduler) Run(ctx context.Context) error {
 	}
 }
 
-// cycle handles one new snapshot (SPEC §7.1 steps 3–6).
+// cycle handles one new snapshot (SPEC §7.1 steps 3–7).
 func (s *Scheduler) cycle(ctx context.Context, snap source.Snapshot) {
 	s.trk.Observe(snap)
 	tried := make(map[string]bool) // one request per server per snapshot, even a failed one
@@ -150,6 +153,16 @@ func (s *Scheduler) cycle(ctx context.Context, snap source.Snapshot) {
 	s.lim.SetRate(s.opts.SweepRate)
 	nSweep := s.fetch(ctx, sweep, s.poll.Due(), tried)
 
+	s.save(ctx, snap)
+
+	// Servers whose snapshot entry carries the start are never queued (SPEC §7.2 rule 8).
+	providerStarts := 0
+	for i := range snap.Servers {
+		if snap.Servers[i].MatchStart != nil {
+			providerStarts++
+		}
+	}
+
 	s.log.Info("cycle done",
 		"snapshot", snap.ID,
 		"servers", len(snap.Servers),
@@ -157,6 +170,7 @@ func (s *Scheduler) cycle(ctx context.Context, snap source.Snapshot) {
 		"burst_queued", len(burst),
 		"sweep", nSweep,
 		"sweep_queued", len(sweep),
+		"provider_starts", providerStarts,
 		"throttles", s.throttleCount(),
 	)
 }
@@ -293,6 +307,17 @@ func (s *Scheduler) publish(ctx context.Context, snap source.Snapshot) {
 		return
 	}
 	s.log.Debug("published", "snapshot", snap.ID, "stale", f.Stale)
+}
+
+// save stores the tracker with Options.Save (SPEC §7.1 step 7). It runs even once ctx is done,
+// since in-flight details have been applied; a failure is logged.
+func (s *Scheduler) save(ctx context.Context, snap source.Snapshot) {
+	if s.opts.Save == nil {
+		return
+	}
+	if err := s.opts.Save(context.WithoutCancel(ctx)); err != nil {
+		s.log.Error("tracker save failed", "snapshot", snap.ID, "err", err)
+	}
 }
 
 // sleepUntil blocks until t on the clock, or until ctx is done. A zero or past t returns at once.

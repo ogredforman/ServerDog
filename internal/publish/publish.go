@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"sort"
 	"time"
 
+	"github.com/ogredforman/ServerDog/internal/atomicfile"
 	"github.com/ogredforman/ServerDog/internal/source"
 	"github.com/ogredforman/ServerDog/internal/tracker"
 )
@@ -142,35 +143,13 @@ func StaleAt(snap source.Snapshot) time.Time {
 }
 
 // Write writes f to dir/servers.json atomically: a temp file in dir, then a rename.
-func Write(ctx context.Context, dir string, f File) (err error) {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("publish: %w", err)
-	}
-	tmp, err := os.CreateTemp(dir, ".servers-*.json")
+func Write(ctx context.Context, dir string, f File) error {
+	// The published file is world-readable.
+	err := atomicfile.Write(ctx, filepath.Join(dir, FileName), 0o644, func(w io.Writer) error {
+		return json.NewEncoder(w).Encode(f)
+	})
 	if err != nil {
-		return fmt.Errorf("publish: create temp file: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			tmp.Close()
-			os.Remove(tmp.Name())
-		}
-	}()
-	// CreateTemp makes the file 0600; the published file is world-readable.
-	if err = tmp.Chmod(0o644); err != nil {
-		return fmt.Errorf("publish: chmod temp file: %w", err)
-	}
-	if err = json.NewEncoder(tmp).Encode(f); err != nil {
-		return fmt.Errorf("publish: encode %s: %w", FileName, err)
-	}
-	if err = tmp.Sync(); err != nil {
-		return fmt.Errorf("publish: sync temp file: %w", err)
-	}
-	if err = tmp.Close(); err != nil {
-		return fmt.Errorf("publish: close temp file: %w", err)
-	}
-	if err = os.Rename(tmp.Name(), filepath.Join(dir, FileName)); err != nil {
-		return fmt.Errorf("publish: rename to %s: %w", FileName, err)
+		return fmt.Errorf("publish: %w", err)
 	}
 	return nil
 }

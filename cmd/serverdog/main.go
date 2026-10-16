@@ -5,10 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -58,6 +60,10 @@ func run() error {
 		DropPct:        cfg.DropPct,
 		DropMin:        cfg.DropMin,
 	})
+	if err := os.MkdirAll(filepath.Dir(cfg.CacheFile), 0o755); err != nil {
+		return fmt.Errorf("create cache dir for %s: %w", cfg.CacheFile, err)
+	}
+	loadCache(trk, cfg.CacheFile)
 	sched, err := scheduler.New(src, clk, trk, scheduler.Options{
 		BurstRate:   cfg.BurstRate,
 		BurstBudget: cfg.BurstBudget,
@@ -70,6 +76,9 @@ func run() error {
 			}
 			site.Published(f)
 			return nil
+		},
+		Save: func(ctx context.Context) error {
+			return trk.SaveFile(ctx, cfg.CacheFile)
 		},
 	})
 	if err != nil {
@@ -119,6 +128,20 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+// loadCache restores the tracker from its cache file. A missing or unreadable file is a cold
+// start, logged, never a failure (SPEC §8 Scheduling and tracking).
+func loadCache(trk *tracker.Tracker, path string) {
+	err := trk.LoadFile(context.Background(), path)
+	switch {
+	case err == nil:
+		slog.Info("tracker cache loaded", "path", path, "servers", trk.Len())
+	case errors.Is(err, fs.ErrNotExist):
+		slog.Info("tracker cold start: no cache file", "path", path)
+	default:
+		slog.Warn("tracker cold start: cache file unreadable", "path", path, "err", err)
+	}
 }
 
 // newSource builds the configured Source. This is the only non-source package that imports a

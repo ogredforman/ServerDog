@@ -18,7 +18,7 @@ import (
 
 // event is one upstream request or publish, in the order the scheduler made them.
 type event struct {
-	kind string // "snapshot", "detail" or "publish"
+	kind string // "snapshot", "detail", "publish" or "save"
 	id   string // detail: server ID
 	at   time.Time
 	snap *source.Snapshot // snapshot: the new snapshot, nil on error or not modified
@@ -34,6 +34,7 @@ type harness struct {
 	opts Options
 
 	failPublishes int // the first n publishes return an error and are not recorded
+	failSaves     int // the first n saves return an error (still recorded)
 
 	mu     sync.Mutex
 	events []event
@@ -85,6 +86,17 @@ func (h *harness) run(t *testing.T, window time.Duration, end time.Duration) {
 		h.add(event{kind: "publish", at: h.clk.Now(), file: &f})
 		return nil
 	}
+	o.Save = func(ctx context.Context) error {
+		h.add(event{kind: "save", at: h.clk.Now()})
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if h.failSaves > 0 {
+			h.failSaves--
+			return errors.New("disk full")
+		}
+		return nil
+	}
 	s, err := New(h, h.clk, trk, o)
 	if err != nil {
 		t.Fatal(err)
@@ -112,6 +124,7 @@ type cycle struct {
 	burst   []event // details before the cycle's first publish
 	publish []event
 	sweep   []event // details after it
+	saves   []event
 }
 
 func (h *harness) cycles() []cycle {
@@ -121,6 +134,8 @@ func (h *harness) cycles() []cycle {
 		case e.kind == "snapshot" && e.snap != nil:
 			out = append(out, cycle{snap: *e.snap})
 		case len(out) == 0:
+		case e.kind == "save":
+			out[len(out)-1].saves = append(out[len(out)-1].saves, e)
 		case e.kind == "publish":
 			out[len(out)-1].publish = append(out[len(out)-1].publish, e)
 		case e.kind == "detail" && len(out[len(out)-1].publish) == 0:
@@ -395,7 +410,7 @@ func TestCycleRetryAfterPausesDetails(t *testing.T) {
 
 	var reqs []event
 	for _, e := range h.events {
-		if e.kind != "publish" {
+		if e.kind != "publish" && e.kind != "save" {
 			reqs = append(reqs, e)
 		}
 	}
@@ -492,6 +507,93 @@ func TestCyclePublishFailureKeepsRunning(t *testing.T) {
 	}
 }
 
+// TestCycleSavesTrackerAfterSweep: the tracker is saved once per cycle, after the sweep's
+// details, and a failed save neither stops the scheduler nor skips the next cycle (SPEC §7.1
+// step 7).
+func TestCycleSavesTrackerAfterSweep(t *testing.T) {
+	clk := clock.NewFake(t0)
+	src := fake.New(clk)
+	src.AddSnapshots(
+		withServers(snap("1", "a", 0), srv("A", 10, "m1"), srv("B", 10, "m1")),
+		withServers(snap("2", "b", refresh), srv("A", 10, "m1"), srv("B", 10, "m1")),
+	)
+	h := newHarness(clk, src, defaultOptions())
+	h.failSaves = 1
+	h.run(t, 20*time.Minute, refresh+60*time.Second)
+	h.checkPolite(t)
+
+	cs := h.cycles()
+	if len(cs) != 2 {
+		t.Fatalf("%d cycles, want 2", len(cs))
+	}
+	for i, c := range cs {
+		if len(c.saves) != 1 {
+			t.Fatalf("cycle %d saved %d times, want 1", i+1, len(c.saves))
+		}
+		if len(c.publish) != 1 {
+			t.Fatalf("cycle %d published %d times, want 1", i+1, len(c.publish))
+		}
+	}
+	// Events are logged in order: the save follows the cycle's last detail request.
+	for i, e := range h.events {
+		if e.kind != "save" {
+			continue
+		}
+		for _, later := range h.events[i+1:] {
+			if later.kind == "snapshot" {
+				break
+			}
+			if later.kind == "detail" {
+				t.Errorf("detail %s at +%v after the cycle's save", later.id, later.at.Sub(t0))
+			}
+		}
+	}
+	if got := ids(cs[0].sweep); len(got) != 2 {
+		t.Errorf("cycle 1 sweep = %v, want A and B before the save", got)
+	}
+}
+
+// TestCycleProviderStartsSkipDetails: when the snapshot carries every server's start, no
+// detail is ever fetched and the provider's start is published exact (SPEC §7.2 rule 8).
+func TestCycleProviderStartsSkipDetails(t *testing.T) {
+	clk := clock.NewFake(t0)
+	src := fake.New(clk)
+	withStart := func(s source.Server, d time.Duration) source.Server {
+		ms := exactAt(d)
+		s.MatchStart = &ms
+		return s
+	}
+	src.AddSnapshots(
+		withServers(snap("1", "a", 0), withStart(srv("A", 10, "m1"), -10*time.Minute), withStart(srv("B", 10, "m1"), -3*time.Minute)),
+		withServers(snap("2", "b", refresh), withStart(srv("A", 10, "m2"), refresh-5*time.Second), withStart(srv("B", 60, "m1"), -3*time.Minute)),
+	)
+	h := newHarness(clk, src, defaultOptions())
+	h.run(t, 20*time.Minute, 2*refresh+30*time.Second)
+	h.checkPolite(t)
+
+	if n := len(src.Calls()) - countSnapshotCalls(src.Calls()); n != 0 {
+		t.Errorf("%d detail calls, want none when the snapshot carries starts", n)
+	}
+	cs := h.cycles()
+	if len(cs) != 2 || len(cs[1].publish) != 1 {
+		t.Fatalf("got %d cycles, want 2 with one publish each", len(cs))
+	}
+	checkState(t, cs[0].publish[0].file, "A", "exact", -10*time.Minute)
+	// A map change confirmed by the provider's start publishes exact, not as an estimate.
+	checkState(t, cs[1].publish[0].file, "A", "exact", refresh-5*time.Second)
+	checkState(t, cs[1].publish[0].file, "B", "exact", -3*time.Minute)
+}
+
+func countSnapshotCalls(calls []fake.Call) int {
+	n := 0
+	for _, c := range calls {
+		if c.Method == fake.MethodSnapshot {
+			n++
+		}
+	}
+	return n
+}
+
 // throttle answers every detail request with a RetryAfterError while the clock is inside one
 // of its windows (offsets from t0).
 type throttle struct {
@@ -523,7 +625,7 @@ func (h *harness) checkRates(t *testing.T) int {
 	run, longest := 0, 0
 	for i := range h.events {
 		e := &h.events[i]
-		if e.kind == "publish" {
+		if e.kind == "publish" || e.kind == "save" {
 			continue
 		}
 		if prev != nil && e.at.Sub(prev.at) < gap {

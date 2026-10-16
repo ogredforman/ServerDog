@@ -137,7 +137,7 @@ and unpredictability.
 
   Record fixtures once into `testdata/wardogservers/` (snapshot, detail exact / `-1` / missing, 429, malformed). Test against `httptest.Server` only. Make `source=wardogservers` the default in `main.go` (SPEC §8 Data provider, §10.4).
 - [x] **2.2** Harden throttling: repeated 429/503 pause all detail fetching with backoff and cut the burst short (unchecked P0 servers publish as estimates). Check that the configured total detail rate cap holds across burst + sweep. Scenario tests (SPEC §7.3 step 4, §8 Data provider).
-- [ ] **2.3** Save the tracker to `cache_file` after each cycle (atomic) and load it at startup. A corrupt or missing file logs a cold start. Switch off detail fetching automatically when snapshots carry `Server.MatchStart`. Tests for round-trip, corrupt file, and the bypass (SPEC §7.1 step 7, §7.2 step 8, §8 Scheduling and tracking).
+- [x] **2.3** Save the tracker to `cache_file` after each cycle (atomic) and load it at startup. A corrupt or missing file logs a cold start. Switch off detail fetching automatically when snapshots carry `Server.MatchStart`. Tests for round-trip, corrupt file, and the bypass (SPEC §7.1 step 7, §7.2 step 8, §8 Scheduling and tracking).
 - [ ] **2.4** Add caching and health:
   - `index.html` `public, max-age=60, s-maxage=300`;
   - content-hash `?v=` asset versioning filled into `index.html` at startup, with versioned assets `public, max-age=31536000, immutable`;
