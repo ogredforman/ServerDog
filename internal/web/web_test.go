@@ -54,6 +54,11 @@ func TestHandler(t *testing.T) {
 		{"js asset stale version", false, http.MethodGet, "/js/logic/timer.js?v=000000000000", http.StatusOK, "public, max-age=60, s-maxage=300", "text/javascript; charset=utf-8", "export function formatTimer"},
 		{"healthz before first publish", false, http.MethodGet, "/healthz", http.StatusOK, "no-store", "application/json", `{"snapshotAgeSeconds":null,"stale":false}`},
 		{"healthz POST", false, http.MethodPost, "/healthz", http.StatusNotFound, "no-store", "", ""},
+		{"css asset", false, http.MethodGet, "/css/app.css", http.StatusOK, "public, max-age=60, s-maxage=300", "text/css; charset=utf-8", "--page"},
+		{"font", false, http.MethodGet, "/fonts/barlow-500.woff2", http.StatusOK, "public, max-age=60, s-maxage=300", "font/woff2", "wOF2"},
+		{"font license", false, http.MethodGet, "/fonts/OFL.txt", http.StatusOK, "public, max-age=60, s-maxage=300", "text/plain; charset=utf-8", "SIL Open Font License"},
+		{"missing font", false, http.MethodGet, "/fonts/nope.woff2", http.StatusNotFound, "no-store", "", ""},
+		{"index under css", false, http.MethodGet, "/css/index.html", http.StatusNotFound, "no-store", "", ""},
 		{"missing js asset", false, http.MethodGet, "/js/nope.js", http.StatusNotFound, "no-store", "", ""},
 		{"js directory", false, http.MethodGet, "/js/logic/", http.StatusNotFound, "no-store", "", ""},
 		{"js unknown type", false, http.MethodGet, "/js/logic", http.StatusNotFound, "no-store", "", ""},
@@ -126,7 +131,7 @@ func TestDataMissingAfterPublish(t *testing.T) {
 }
 
 // assetRef matches a versioned asset URL in the served index.html.
-var assetRef = regexp.MustCompile(`(/js/[A-Za-z0-9_./-]+)\?v=([0-9a-f]+)`)
+var assetRef = regexp.MustCompile(`(/(?:js|css|fonts)/[A-Za-z0-9_./-]+)\?v=([0-9a-f]+)`)
 
 func TestVersionedAssets(t *testing.T) {
 	s, _ := newSite(t, `{}`)
@@ -148,7 +153,7 @@ func TestVersionedAssets(t *testing.T) {
 	for _, m := range assetRef.FindAllStringSubmatch(index, -1) {
 		refs[m[1]] = m[2]
 	}
-	for _, url := range []string{"/js/app.js", "/js/logic/timer.js", "/js/logic/filters.js", "/js/logic/sort.js", "/js/logic/stale.js", "/js/logic/clock.js", "/js/logic/refresh.js", "/js/logic/prefs.js", "/js/logic/view.js"} {
+	for _, url := range []string{"/js/app.js", "/js/logic/timer.js", "/js/logic/filters.js", "/js/logic/sort.js", "/js/logic/stale.js", "/js/logic/clock.js", "/js/logic/refresh.js", "/js/logic/prefs.js", "/js/logic/view.js", "/js/logic/regions.js", "/css/app.css", "/fonts/barlow-400.woff2", "/fonts/barlow-500.woff2", "/fonts/barlow-600.woff2"} {
 		if _, ok := refs[url]; !ok {
 			t.Errorf("index.html has no versioned URL for %s", url)
 		}

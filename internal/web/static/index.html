@@ -4,50 +4,92 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ServerDog</title>
+  <link rel="preload" href="/fonts/barlow-500.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Font URLs live here, not in app.css, so they get ?v= versions at startup like the other assets. -->
+  <style>
+    @font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url("/fonts/barlow-400.woff2") format("woff2"); }
+    @font-face { font-family: Barlow; font-weight: 500; font-display: swap; src: url("/fonts/barlow-500.woff2") format("woff2"); }
+    @font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url("/fonts/barlow-600.woff2") format("woff2"); }
+  </style>
+  <link rel="stylesheet" href="/css/app.css">
   <!-- importmap -->
   <script type="module" src="/js/app.js"></script>
 </head>
 <body>
   <header id="navbar">
-    <strong>ServerDog</strong>
-    <small>Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.</small>
-    <p id="stale-notice" role="status" hidden></p>
+    <div class="nav-left">
+      <button type="button" id="back" class="square-btn" aria-label="Back to server type" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+      </button>
+      <div class="nav-title">
+        <small>// Server browser</small>
+        <h1 id="title">Deploy</h1>
+      </div>
+    </div>
+    <div class="nav-right">
+      <p id="stale-notice" role="status" hidden></p>
+      <div class="brand">
+        <strong>ServerDog</strong>
+        <small class="disclaimer">Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.</small>
+      </div>
+    </div>
   </header>
   <main>
     <section id="type-picker" hidden>
-      <h2>Choose server type</h2>
-      <button type="button" data-type="o">Official</button>
-      <button type="button" data-type="c">Community</button>
+      <button type="button" class="type-card" data-type="o">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 8 12v18c0 15 10 26 24 30 14-4 24-15 24-30V12Z" fill="currentColor"/><path d="m20 32 8 8 16-17" fill="none" stroke="#3a3a38" stroke-width="6"/></svg>
+        <span class="card-title">Official</span>
+        <span class="card-desc">Play on official servers as intended by the developers. Default game mode only.</span>
+      </button>
+      <button type="button" class="type-card" data-type="c">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="currentColor"><circle cx="32" cy="17" r="9"/><circle cx="14" cy="23" r="6"/><circle cx="50" cy="23" r="6"/><path d="M18 52V42c0-8 6-14 14-14s14 6 14 14v10Z"/><path d="M4 52v-8c0-6 4-10 10-10 2 0 4 .5 5 1.5-2 2.5-3 5.5-3 8.5v8Z"/><path d="M60 52v-8c0-6-4-10-10-10-2 0-4 .5-5 1.5 2 2.5 3 5.5 3 8.5v8Z"/></g></svg>
+        <span class="card-title">Community</span>
+        <span class="card-desc">Servers run by the community, with active admins. Infantry only, hardcore and level capped servers.</span>
+      </button>
     </section>
     <section id="browser" hidden>
       <div id="controls">
-        <button type="button" id="change-type"></button>
-        <fieldset id="regions">
-          <legend>Regions</legend>
-        </fieldset>
-        <label><input type="checkbox" id="show-full"> Show Full</label>
-        <label><input type="checkbox" id="show-empty"> Show Empty</label>
-        <button type="button" id="fresh-starts" aria-pressed="false">Find Fresh Starts</button>
+        <button type="button" class="btn" id="show-full" aria-pressed="false">Show Full</button>
+        <button type="button" class="btn" id="show-empty" aria-pressed="false">Show Empty</button>
+        <button type="button" class="btn" id="fresh-starts" aria-pressed="false">Find Fresh Starts</button>
       </div>
-      <table id="server-list">
-        <thead>
-          <tr>
-            <th aria-sort="none"><button type="button" data-sort="name">Name</button></th>
-            <th aria-sort="none"><button type="button" data-sort="players">Players</button></th>
-            <th aria-sort="none"><button type="button" data-sort="map">Map / mode</button></th>
-            <th aria-sort="none"><button type="button" data-sort="rulesets">Rulesets</button></th>
-            <th aria-sort="none"><button type="button" data-sort="password">Password</button></th>
-            <th aria-sort="none"><button type="button" data-sort="timer">Match time</button></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p id="empty" hidden></p>
+      <div id="list-panel">
+        <table id="server-list">
+          <thead>
+            <tr>
+              <th class="icon-col" aria-sort="none"><button type="button" data-sort="password" aria-label="Password"><svg class="icon"><use href="#icon-lock"/></svg><span class="arrow" aria-hidden="true"></span></button></th>
+              <th class="icon-col"><span class="head" role="img" aria-label="Official"><svg class="icon"><use href="#icon-shield"/></svg></span></th>
+              <th class="name-col" aria-sort="none"><button type="button" data-sort="name">Server name<span class="arrow" aria-hidden="true"></span></button></th>
+              <th aria-sort="none"><button type="button" data-sort="mode">Mode<span class="arrow" aria-hidden="true"></span></button></th>
+              <th aria-sort="none"><button type="button" data-sort="map">Map<span class="arrow" aria-hidden="true"></span></button></th>
+              <th aria-sort="none"><button type="button" data-sort="players">Players<span class="arrow" aria-hidden="true"></span></button></th>
+              <th aria-sort="none"><button type="button" data-sort="timer">Timer<span class="arrow" aria-hidden="true"></span></button></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty" hidden></p>
+      </div>
+      <div id="bottom-bar">
+        <button type="button" class="btn" id="region-open" aria-haspopup="dialog">Region [<span id="region-count">0</span>]</button>
+      </div>
     </section>
     <p id="load-status" role="status">Loading servers…</p>
   </main>
+  <dialog id="region-modal" aria-labelledby="region-title">
+    <h2 id="region-title">Select region [<span id="region-modal-count">0</span>]</h2>
+    <p class="hint">Pick as many regions as you like. With none picked, every region is shown.</p>
+    <div id="region-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="region-close">Close</button>
+    </div>
+  </dialog>
   <footer>
     <small>Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.</small>
   </footer>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="icon-lock" viewBox="0 0 16 16"><path d="M4 7V5a4 4 0 0 1 8 0v2h1v8H3V7Zm2 0h4V5a2 2 0 0 0-4 0Z" fill="currentColor"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 16 16"><path d="M8 1 2 3v5c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V3Z" fill="currentColor"/><path d="m5 8 2 2 4-4" fill="none" stroke="#1e1e1e" stroke-width="1.8"/></symbol>
+  </svg>
 </body>
 </html>

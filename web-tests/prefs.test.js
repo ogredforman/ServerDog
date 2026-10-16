@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadPrefs, savePrefs, nextSort, DEFAULT_PREFS, PREFS_KEY } from '../internal/web/static/js/logic/prefs.js';
+import { loadPrefs, savePrefs, hasSavedPrefs, nextSort, DEFAULT_PREFS, PREFS_KEY } from '../internal/web/static/js/logic/prefs.js';
 
 // memStorage is a localStorage stand-in holding one raw value.
 const memStorage = (raw = null) => {
@@ -67,4 +67,11 @@ test('nextSort', () => {
   for (const c of cases) {
     assert.deepEqual(nextSort(c.sort, c.click), c.want, `${JSON.stringify(c.sort)} + ${c.click}`);
   }
+});
+
+test('hasSavedPrefs', () => {
+  assert.equal(hasSavedPrefs(memStorage()), false, 'nothing saved');
+  assert.equal(hasSavedPrefs(memStorage('{}')), true, 'saved');
+  assert.equal(hasSavedPrefs(memStorage('not json')), true, 'corrupt still counts as saved');
+  assert.equal(hasSavedPrefs(throwing), false, 'unreadable');
 });

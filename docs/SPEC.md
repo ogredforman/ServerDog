@@ -160,7 +160,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 
 **Browser UI**
 - [P] Server type picker (official / community) and multi-region selection, both remembered in localStorage.
-- [P] Server list showing name, players/max, map/mode, rulesets, password flag and match timer, with sorting by those columns.
+- [P] Server list showing name, players/max, map/mode, rulesets, password flag and match timer, with sorting by the header columns (password, name, mode, map, players, timer; rulesets show as chips under the name and aren't a sort column).
 - [P] Show Full / Show Empty toggles (full = `p >= mp`, including 0/0; empty = `p == 0`), remembered in localStorage.
 - [P] Match timer ticks every second, formatted `m:ss` below 1 hour and `h:mm:ss` above. STARTING shows a "STARTING" label, estimates show `~m:ss` in a muted style, unknown shows `—`.
 - [P] Find Fresh Starts button. Order: starting (newest `ms` first) → exact (newest first) → estimate (newest first) → unknown (players descending). Ties broken by players descending, then name.

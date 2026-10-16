@@ -2,19 +2,26 @@
 // Logic lives in ./logic/; this file only touches the DOM.
 
 import { clockOffset } from './logic/clock.js';
-import { loadPrefs, savePrefs, nextSort } from './logic/prefs.js';
+import { loadPrefs, savePrefs, hasSavedPrefs, nextSort } from './logic/prefs.js';
 import { createRefresher } from './logic/refresh.js';
+import { regionList, guessRegion } from './logic/regions.js';
 import { formatTimer } from './logic/timer.js';
-import { viewServers, rowCells, activeFilters, staleNotice } from './logic/view.js';
+import { viewServers, rowCells, sortIndicator, activeFilters, staleNotice } from './logic/view.js';
 
 const $ = (sel) => document.querySelector(sel);
 const typeNames = { o: 'Official', c: 'Community' };
 
 const prefs = loadPrefs(localStorage);
+if (!hasSavedPrefs(localStorage)) {
+  // First visit: preselect the region nearest the visitor, from the time zone only.
+  const guess = guessRegion(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  if (guess) prefs.regions = [guess];
+}
 let data = null;
 let offset = 0;
 
 const now = () => Date.now() + offset;
+const panel = $('#list-panel');
 
 // Timer cells currently on screen; only these are updated by the 1s ticker.
 const visible = new Set();
@@ -23,7 +30,7 @@ const observer = new IntersectionObserver((entries) => {
     if (e.isIntersecting) visible.add(e.target);
     else visible.delete(e.target);
   }
-});
+}, { root: panel });
 
 function setPrefs(change) {
   Object.assign(prefs, change);
@@ -33,39 +40,66 @@ function setPrefs(change) {
 
 let shownRegions = '';
 
-// renderRegions rebuilds the region checkboxes only when the data's region list changed.
+// renderRegions rebuilds the region modal's list only when the data's region list changed.
 function renderRegions() {
   const key = data.regions.join('\n');
   if (key === shownRegions) return;
   shownRegions = key;
-  const box = $('#regions');
-  const chosen = new Set(prefs.regions);
-  const inputs = data.regions.map((r) => {
+  const rows = regionList(data.regions).map(({ id, name }) => {
     const input = document.createElement('input');
     input.type = 'checkbox';
-    input.value = r;
-    input.checked = chosen.has(r);
+    input.value = id;
     const label = document.createElement('label');
-    label.append(input, ` ${r}`);
+    label.className = 'region-row';
+    label.append(input, name);
     return label;
   });
-  box.replaceChildren(box.querySelector('legend'), ...inputs);
+  $('#region-list').replaceChildren(...rows);
+}
+
+function icon(id) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'icon');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `#${id}`);
+  svg.append(use);
+  return svg;
+}
+
+function cell(className, ...content) {
+  const td = document.createElement('td');
+  if (className) td.className = className;
+  td.append(...content);
+  return td;
 }
 
 function renderRow(server, t) {
-  const cells = rowCells(server, t);
-  const tr = document.createElement('tr');
-  for (const key of ['name', 'players', 'map', 'rulesets', 'password']) {
-    const td = document.createElement('td');
-    td.textContent = cells[key];
-    tr.append(td);
+  const c = rowCells(server, t);
+  const name = cell('name', c.name);
+  if (c.rulesets.length > 0) {
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    for (const rs of c.rulesets) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = rs;
+      chips.append(chip);
+    }
+    name.append(chips);
   }
-  const timer = document.createElement('td');
-  timer.textContent = cells.timer.text;
-  timer.className = `timer ${cells.timer.kind}`;
+  const timer = cell(`timer ${c.timer.kind}`, c.timer.text);
   if (server.ms != null) timer.dataset.ms = server.ms;
   if (server.st != null) timer.dataset.st = server.st;
-  tr.append(timer);
+  const tr = document.createElement('tr');
+  tr.append(
+    cell('password', ...(c.password ? [icon('icon-lock')] : [])),
+    cell('official', ...(c.official ? [icon('icon-shield')] : [])),
+    name,
+    cell('mode', c.mode),
+    cell('map', c.map),
+    cell('players', c.players),
+    timer,
+  );
   return tr;
 }
 
@@ -76,45 +110,62 @@ function renderStale() {
   if (text !== null && notice.textContent !== text) notice.textContent = text;
 }
 
+function renderHeaders() {
+  for (const th of document.querySelectorAll('#server-list th[aria-sort]')) {
+    const col = th.querySelector('button').dataset.sort;
+    const arrow = sortIndicator(prefs, col);
+    th.querySelector('.arrow').textContent = arrow;
+    th.toggleAttribute('data-sorted', arrow !== '▶');
+    th.setAttribute('aria-sort', arrow === '▼' ? 'ascending' : arrow === '▲' ? 'descending' : 'none');
+  }
+}
+
+function renderRegionState() {
+  const present = new Set(data.regions);
+  const chosen = new Set(prefs.regions.filter((r) => present.has(r)));
+  for (const input of document.querySelectorAll('#region-list input')) input.checked = chosen.has(input.value);
+  $('#region-count').textContent = chosen.size;
+  $('#region-modal-count').textContent = chosen.size;
+}
+
 function render() {
   const picking = !prefs.type;
   $('#type-picker').hidden = !picking;
   $('#browser').hidden = picking || !data;
+  $('#back').hidden = picking;
+  $('#title').textContent = picking ? 'Deploy' : typeNames[prefs.type];
+  $('#load-status').hidden = picking || Boolean(data);
   renderStale();
   if (picking || !data) return;
 
-  $('#change-type').textContent = `${typeNames[prefs.type]} servers (change)`;
-  $('#show-full').checked = prefs.showFull;
-  $('#show-empty').checked = prefs.showEmpty;
+  $('#show-full').setAttribute('aria-pressed', String(prefs.showFull));
+  $('#show-empty').setAttribute('aria-pressed', String(prefs.showEmpty));
   $('#fresh-starts').setAttribute('aria-pressed', String(prefs.freshStarts));
-  for (const th of document.querySelectorAll('#server-list th')) {
-    const col = th.querySelector('button').dataset.sort;
-    const active = !prefs.freshStarts && col === prefs.sort.column;
-    th.setAttribute('aria-sort', !active ? 'none' : prefs.sort.dir === 'asc' ? 'ascending' : 'descending');
-  }
+  renderHeaders();
+  renderRegionState();
 
-  const scroll = window.scrollY;
+  const scroll = panel.scrollTop;
   const rows = viewServers(data.servers, prefs, data.regions);
   const t = now();
   observer.disconnect();
   visible.clear();
   $('#server-list tbody').replaceChildren(...rows.map((s) => renderRow(s, t)));
-  for (const cell of document.querySelectorAll('#server-list td.exact, #server-list td.estimate')) {
-    observer.observe(cell);
+  for (const td of document.querySelectorAll('#server-list td.exact, #server-list td.estimate')) {
+    observer.observe(td);
   }
   const empty = $('#empty');
   empty.hidden = rows.length > 0;
   if (rows.length === 0) {
     empty.textContent = `No servers match the current filters: ${activeFilters(prefs, data.regions).join(', ')}.`;
   }
-  window.scrollTo(window.scrollX, scroll);
+  panel.scrollTop = scroll;
 }
 
 // tick updates the visible timer cells in place and the stale notice; rows never move here.
 function tick() {
   const t = now();
-  for (const cell of visible) {
-    cell.textContent = formatTimer({ ms: Number(cell.dataset.ms), st: cell.dataset.st }, t).text;
+  for (const td of visible) {
+    td.textContent = formatTimer({ ms: Number(td.dataset.ms), st: td.dataset.st }, t).text;
   }
   renderStale();
 }
@@ -123,13 +174,9 @@ function bind() {
   for (const btn of document.querySelectorAll('#type-picker button')) {
     btn.addEventListener('click', () => setPrefs({ type: btn.dataset.type }));
   }
-  $('#change-type').addEventListener('click', () => setPrefs({ type: null }));
-  $('#regions').addEventListener('change', () => {
-    const regions = [...document.querySelectorAll('#regions input:checked')].map((i) => i.value);
-    setPrefs({ regions });
-  });
-  $('#show-full').addEventListener('change', (e) => setPrefs({ showFull: e.target.checked }));
-  $('#show-empty').addEventListener('change', (e) => setPrefs({ showEmpty: e.target.checked }));
+  $('#back').addEventListener('click', () => setPrefs({ type: null }));
+  $('#show-full').addEventListener('click', () => setPrefs({ showFull: !prefs.showFull }));
+  $('#show-empty').addEventListener('click', () => setPrefs({ showEmpty: !prefs.showEmpty }));
   $('#fresh-starts').addEventListener('click', () => setPrefs({ freshStarts: true }));
   for (const btn of document.querySelectorAll('#server-list th button')) {
     btn.addEventListener('click', () => {
@@ -139,6 +186,20 @@ function bind() {
       setPrefs({ freshStarts: false, sort });
     });
   }
+
+  const modal = $('#region-modal');
+  $('#region-open').addEventListener('click', () => modal.showModal());
+  $('#region-close').addEventListener('click', () => modal.close());
+  // A click on the backdrop lands on the dialog element itself.
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.close();
+  });
+  // Each checkbox applies at once (no Confirm). Saved regions missing from the data are kept.
+  $('#region-list').addEventListener('change', (e) => {
+    const id = e.target.value;
+    const rest = prefs.regions.filter((r) => r !== id);
+    setPrefs({ regions: e.target.checked ? [...rest, id] : rest });
+  });
 }
 
 const refresher = createRefresher({
@@ -151,7 +212,6 @@ const refresher = createRefresher({
   onData(body, dateHeader) {
     offset = clockOffset(dateHeader, Date.now());
     data = { ...body, regions: body.regions || [], servers: body.servers || [] };
-    $('#load-status').hidden = true;
     renderRegions();
     render();
   },

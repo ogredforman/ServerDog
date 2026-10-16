@@ -40,6 +40,16 @@ export function loadPrefs(storage) {
   return prefs;
 }
 
+// hasSavedPrefs reports whether anything was saved before, so a first visit can preselect
+// a guessed region. Unreadable storage counts as nothing saved.
+export function hasSavedPrefs(storage) {
+  try {
+    return storage.getItem(PREFS_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 // savePrefs stores prefs. Storage errors (private mode, quota) are ignored: the choices
 // still apply for this visit.
 export function savePrefs(storage, prefs) {

@@ -27,9 +27,14 @@ var static embed.FS
 // assetTypes are the static asset extensions served, with a fixed Content-Type so the
 // result doesn't depend on the host's MIME registry.
 var assetTypes = map[string]string{
-	".js":  "text/javascript; charset=utf-8",
-	".css": "text/css; charset=utf-8",
+	".js":    "text/javascript; charset=utf-8",
+	".css":   "text/css; charset=utf-8",
+	".woff2": "font/woff2",
+	".txt":   "text/plain; charset=utf-8", // the font license
 }
+
+// assetDirs are the embedded directories served, each under its own URL prefix ("/js/…").
+var assetDirs = []string{"js", "css", "fonts"}
 
 // Cache-Control values from SPEC §7.4 and §8 HTTP serving.
 const (
@@ -80,7 +85,9 @@ func New(clk clock.Clock, dataDir string) *Site {
 	s := &Site{clk: clk, dataDir: dataDir, mux: http.NewServeMux(), index: index, hashes: hashes}
 	s.mux.HandleFunc("GET /{$}", s.serveIndex)
 	s.mux.HandleFunc("GET /data/"+publish.FileName, s.serveData)
-	s.mux.HandleFunc("GET /js/{path...}", s.serveAsset)
+	for _, dir := range assetDirs {
+		s.mux.HandleFunc("GET /"+dir+"/{path...}", s.serveAsset)
+	}
 	s.mux.HandleFunc("GET /healthz", s.serveHealth)
 	s.mux.HandleFunc("/", notFound)
 	return s
@@ -108,23 +115,26 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // assetHashes returns a short sha256 content hash for every servable embedded asset.
 func assetHashes(fsys fs.FS) (map[string]string, error) {
 	hashes := map[string]string{}
-	err := fs.WalkDir(fsys, "static/js", func(name string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if _, ok := assetTypes[path.Ext(name)]; !ok || d.IsDir() {
+	for _, dir := range assetDirs {
+		root := "static/" + dir
+		err := fs.WalkDir(fsys, root, func(name string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if _, ok := assetTypes[path.Ext(name)]; !ok || d.IsDir() {
+				return nil
+			}
+			body, err := fs.ReadFile(fsys, name)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", name, err)
+			}
+			sum := sha256.Sum256(body)
+			hashes[name] = hex.EncodeToString(sum[:])[:12]
 			return nil
-		}
-		body, err := fs.ReadFile(fsys, name)
+		})
 		if err != nil {
-			return fmt.Errorf("read %s: %w", name, err)
+			return nil, fmt.Errorf("walk %s: %w", root, err)
 		}
-		sum := sha256.Sum256(body)
-		hashes[name] = hex.EncodeToString(sum[:])[:12]
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("walk static/js: %w", err)
 	}
 	return hashes, nil
 }

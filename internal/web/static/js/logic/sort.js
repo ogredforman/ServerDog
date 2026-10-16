@@ -9,13 +9,15 @@ const byName = (a, b) => text(a.n || '', b.n || '') || text(a.id || '', b.id || 
 const byPlayersDesc = (a, b) => b.p - a.p;
 const byNewestStart = (a, b) => (b.ms ?? 0) - (a.ms ?? 0);
 
-// Column keys. `timer` sorts by match start: ascending shows the newest match (shortest
+const mapName = (s) => s.map || s.base || '';
+
+// Column keys, matching the list headers. `timer` sorts by match start: ascending shows the newest match (shortest
 // elapsed) first. Servers with no start sort last in either direction.
 const columns = {
   name: (a, b) => text(a.n || '', b.n || ''),
   players: (a, b) => a.p - b.p,
-  map: (a, b) => text(a.map || '', b.map || ''),
-  rulesets: (a, b) => text((a.rs || []).join(', '), (b.rs || []).join(', ')),
+  mode: (a, b) => text(a.exp || '', b.exp || ''),
+  map: (a, b) => text(mapName(a), mapName(b)),
   password: (a, b) => Number(Boolean(a.pw)) - Number(Boolean(b.pw)),
   timer: (a, b) => byNewestStart(a, b),
 };

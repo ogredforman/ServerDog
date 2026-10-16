@@ -3,6 +3,7 @@
 
 import { filterServers } from './filters.js';
 import { sortServers, freshStartsOrder } from './sort.js';
+import { regionName } from './regions.js';
 import { isStale } from './stale.js';
 import { formatDuration, formatTimer } from './timer.js';
 
@@ -21,16 +22,26 @@ export function viewServers(servers, prefs, regions = []) {
   return prefs.freshStarts ? freshStartsOrder(shown) : sortServers(shown, prefs.sort);
 }
 
-// rowCells is the text of each cell in a server row.
+// rowCells is what each cell in a server row shows, in header order: password and official
+// flags, the name with its ruleset chips, mode, map, players and the timer.
 export function rowCells(server, now) {
   return {
+    password: Boolean(server.pw),
+    official: server.t === 'o',
     name: server.n || server.id || '',
+    rulesets: [...(server.rs || [])],
+    mode: server.exp || '',
+    map: server.map || server.base || '',
     players: `${server.p}/${server.mp}`,
-    map: [server.map || server.base, server.exp].filter(Boolean).join(' · '),
-    rulesets: (server.rs || []).join(', '),
-    password: server.pw ? 'Yes' : '',
     timer: formatTimer(server, now),
   };
+}
+
+// sortIndicator is a header's arrow, as in-game: ▶ unsorted, ▲ descending, ▼ ascending.
+// Every header shows ▶ while the Fresh Starts order is on.
+export function sortIndicator(prefs, column) {
+  if (prefs.freshStarts || prefs.sort.column !== column) return '▶';
+  return prefs.sort.dir === 'desc' ? '▲' : '▼';
 }
 
 const typeNames = { o: 'Official', c: 'Community' };
@@ -41,7 +52,7 @@ export function activeFilters(prefs, regions = []) {
   const chosen = prefs.regions.filter((r) => present.has(r));
   const out = [];
   if (prefs.type) out.push(typeNames[prefs.type] || prefs.type);
-  if (chosen.length > 0) out.push(`Regions: ${chosen.join(', ')}`);
+  if (chosen.length > 0) out.push(`Regions: ${chosen.map(regionName).join(', ')}`);
   if (!prefs.showFull) out.push('Hiding full');
   if (!prefs.showEmpty) out.push('Hiding empty');
   return out;

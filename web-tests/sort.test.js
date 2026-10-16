@@ -7,10 +7,10 @@ const srv = (id, fields) => ({ id, n: id, p: 0, mp: 10, map: '', rs: [], pw: fal
 
 test('sortServers by column and direction', () => {
   const servers = [
-    srv('b', { p: 5, map: 'Dunes', rs: ['hc'], pw: true, st: 'exact', ms: 100 }),
-    srv('a', { p: 9, map: 'Arctic', rs: ['vanilla'], st: 'estimate', ms: 300 }),
+    srv('b', { p: 5, map: 'Dunes', exp: 'Koth', rs: ['hc'], pw: true, st: 'exact', ms: 100 }),
+    srv('a', { p: 9, map: 'Arctic', exp: 'Conquest', rs: ['vanilla'], st: 'estimate', ms: 300 }),
     srv('d', { p: 0 }),
-    srv('c', { p: 5, map: 'Coast', rs: ['ffa', 'hc'], st: 'starting', ms: 200 }),
+    srv('c', { p: 5, map: '', base: 'Coast', exp: 'Koth', rs: ['ffa', 'hc'], st: 'starting', ms: 200 }),
   ];
   const cases = [
     ['name', 'asc', ['a', 'b', 'c', 'd']],
@@ -18,7 +18,8 @@ test('sortServers by column and direction', () => {
     ['players', 'asc', ['d', 'b', 'c', 'a']],
     ['players', 'desc', ['a', 'b', 'c', 'd']],
     ['map', 'asc', ['d', 'a', 'c', 'b']],
-    ['rulesets', 'asc', ['d', 'c', 'b', 'a']],
+    ['mode', 'asc', ['d', 'a', 'b', 'c']],
+    ['mode', 'desc', ['b', 'c', 'a', 'd']],
     ['password', 'asc', ['a', 'c', 'd', 'b']],
     ['password', 'desc', ['b', 'a', 'c', 'd']],
     ['timer', 'asc', ['a', 'c', 'b', 'd']],

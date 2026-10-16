@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { viewServers, rowCells, activeFilters, staleNotice } from '../internal/web/static/js/logic/view.js';
+import { viewServers, rowCells, sortIndicator, activeFilters, staleNotice } from '../internal/web/static/js/logic/view.js';
 import { DEFAULT_PREFS } from '../internal/web/static/js/logic/prefs.js';
 
 const servers = [
@@ -39,13 +39,13 @@ test('rowCells', () => {
   const cases = [
     {
       name: 'full row',
-      server: { id: 'X1', n: 'Dogs', p: 3, mp: 16, map: 'Harbor Night', base: 'Harbor', exp: 'Conquest', rs: ['HC', 'NoAim'], pw: true, ms: 1_800_000_000 - 65, st: 'exact' },
-      want: { name: 'Dogs', players: '3/16', map: 'Harbor Night · Conquest', rulesets: 'HC, NoAim', password: 'Yes', timer: { text: '1:05', kind: 'exact' } },
+      server: { id: 'X1', n: 'Dogs', t: 'o', p: 3, mp: 16, map: 'Harbor Night', base: 'Harbor', exp: 'Conquest', rs: ['HC', 'NoAim'], pw: true, ms: 1_800_000_000 - 65, st: 'exact' },
+      want: { password: true, official: true, name: 'Dogs', rulesets: ['HC', 'NoAim'], mode: 'Conquest', map: 'Harbor Night', players: '3/16', timer: { text: '1:05', kind: 'exact' } },
     },
     {
       name: 'sparse row falls back',
-      server: { id: 'X2', p: 0, mp: 0, base: 'Harbor', ms: null, st: 'unknown' },
-      want: { name: 'X2', players: '0/0', map: 'Harbor', rulesets: '', password: '', timer: { text: '—', kind: 'unknown' } },
+      server: { id: 'X2', t: 'c', p: 0, mp: 0, base: 'Harbor', ms: null, st: 'unknown' },
+      want: { password: false, official: false, name: 'X2', rulesets: [], mode: '', map: 'Harbor', players: '0/0', timer: { text: '—', kind: 'unknown' } },
     },
   ];
   for (const c of cases) {
@@ -57,9 +57,22 @@ test('activeFilters', () => {
   const cases = [
     { prefs: prefs(), want: ['Official'] },
     { prefs: prefs({ type: 'c', regions: ['eu', 'as'], showFull: false, showEmpty: false }), want: ['Community', 'Regions: eu', 'Hiding full', 'Hiding empty'] },
+    { prefs: prefs({ regions: ['na-east', 'eu-west'] }), regions: ['eu-west', 'na-east'], want: ['Official', 'Regions: North America (East), Europe (West)'] },
   ];
   for (const c of cases) {
-    assert.deepEqual(activeFilters(c.prefs, regions), c.want);
+    assert.deepEqual(activeFilters(c.prefs, c.regions ?? regions), c.want);
+  }
+});
+
+test('sortIndicator', () => {
+  const cases = [
+    { name: 'sorted ascending', prefs: prefs({ sort: { column: 'players', dir: 'asc' } }), column: 'players', want: '▼' },
+    { name: 'sorted descending', prefs: prefs({ sort: { column: 'players', dir: 'desc' } }), column: 'players', want: '▲' },
+    { name: 'other column', prefs: prefs({ sort: { column: 'players', dir: 'desc' } }), column: 'map', want: '▶' },
+    { name: 'fresh starts on', prefs: prefs({ freshStarts: true, sort: { column: 'players', dir: 'desc' } }), column: 'players', want: '▶' },
+  ];
+  for (const c of cases) {
+    assert.equal(sortIndicator(c.prefs, c.column), c.want, c.name);
   }
 });
 
