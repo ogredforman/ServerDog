@@ -36,6 +36,12 @@ test('sortServers ties break by name then id, input untouched', () => {
   assert.deepEqual(servers, copy);
 });
 
+test('sortServers compares numbers in names by value', () => {
+  const servers = [srv('10', { n: 'EU Server #10' }), srv('2', { n: 'EU Server #2' }), srv('1', { n: 'EU Server #1' })];
+  assert.deepEqual(ids(sortServers(servers, { column: 'name', dir: 'asc' })), ['1', '2', '10']);
+  assert.deepEqual(ids(sortServers(servers, { column: 'name', dir: 'desc' })), ['10', '2', '1']);
+});
+
 test('sortServers rejects unknown column', () => {
   assert.throws(() => sortServers([], { column: 'nope' }));
   assert.ok(sortColumns.includes('timer'));

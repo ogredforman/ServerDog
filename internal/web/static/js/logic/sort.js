@@ -1,8 +1,9 @@
 // Column sorts and the Find Fresh Starts order (SPEC §7.5 step 6, §8 Browser UI). Pure:
 // both return a new array and leave the input untouched.
 
-// A fixed collator keeps text order the same across browsers and locales.
-const text = new Intl.Collator('en').compare;
+// A fixed collator keeps text order the same across browsers and locales. `numeric` compares
+// digit runs by value, so "Server #2" sorts before "Server #10".
+const text = new Intl.Collator('en', { numeric: true }).compare;
 
 const byName = (a, b) => text(a.n || '', b.n || '') || text(a.id || '', b.id || '');
 const byPlayersDesc = (a, b) => b.p - a.p;
