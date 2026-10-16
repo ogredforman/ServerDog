@@ -300,6 +300,7 @@ main {
 #server-list .icon-col > .head { justify-content: center; padding: 0; }
 #server-list .icon-col:not([data-sorted]) .arrow { display: none; }
 #server-list .name-col { width: 44%; }
+#server-list .join-col { width: 1%; }
 
 .arrow { font-size: 10px; }
 .icon { width: 15px; height: 15px; color: var(--icon); }
@@ -365,10 +366,10 @@ main {
 #server-list tbody tr[aria-selected="true"] td.estimate { color: #d9cfb0; }
 #server-list tbody tr[aria-selected="true"] td.unknown { color: #b8ab8a; }
 
-/* Copy-join-code button on the selected row, styled like the game's Join Match button (04). */
+/* Copy-join-code button on every row with a join code, in its own last column, styled like the
+   game's Join Match button (04). */
+#server-list tbody td.join { white-space: nowrap; }
 .join-btn {
-  float: right;
-  margin: 0 0 0 12px;
   padding: 5px 14px;
   background: linear-gradient(90deg, var(--join-from), var(--join-to));
   border: 1px solid var(--gold);

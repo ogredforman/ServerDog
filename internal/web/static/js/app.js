@@ -96,8 +96,15 @@ function renderRow(server, t) {
   tr.classList.toggle('full', c.full);
   tr.classList.toggle('empty', c.empty);
   tr.classList.toggle('pw', c.password);
-  // Only rows with a join code can be selected: the selected row's button copies it.
+  // Only rows with a join code can be selected or get the copy-join-code button.
+  const join = cell('join');
   if (server.id) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'join-btn';
+    btn.textContent = 'Copy join code';
+    btn.setAttribute('aria-label', `Copy join code for ${server.n}`);
+    join.append(btn);
     tr.dataset.id = server.id;
     tr.tabIndex = 0;
   }
@@ -109,27 +116,17 @@ function renderRow(server, t) {
     cell('map', c.map),
     cell('players', c.players),
     timer,
+    join,
   );
   if (server.id && server.id === selectedId) select(tr);
   return tr;
 }
 
-// select marks tr as the selected row and gives it the gold copy-join-code button; a null tr
-// just clears the current selection.
+// select marks tr as the selected (gold) row; a null tr just clears the current selection.
 function select(tr) {
-  const old = document.querySelector('#server-list tr[aria-selected="true"]');
-  if (old) {
-    old.removeAttribute('aria-selected');
-    old.querySelector('.join-btn')?.remove();
-  }
+  document.querySelector('#server-list tr[aria-selected="true"]')?.removeAttribute('aria-selected');
   selectedId = tr ? tr.dataset.id : null;
-  if (!tr) return;
-  tr.setAttribute('aria-selected', 'true');
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'join-btn';
-  btn.textContent = 'Copy join code';
-  tr.querySelector('td.name').prepend(btn);
+  if (tr) tr.setAttribute('aria-selected', 'true');
 }
 
 function renderStale() {

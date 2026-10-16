@@ -35,7 +35,7 @@ preselected (last region played). The top row is hovered; nothing else is clicke
 - **Right panel:** empty until a row is hovered. Then it shows the map image with `INCOMING…`,
   the big map name and coordinates, the server name (truncated with `…`), ruleset chips and
   `MAX ALLOWED PING 250 MS`.
-  - ServerDog: no detail panel. The selected row gets the gold copy-join-code button (see 04);
+  - ServerDog: no detail panel. Every row gets the gold copy-join-code button (see 04);
     a real Join Match link is parked.
 - **Scrollbar:** thin, cream (`#eadfcc`).
 
@@ -128,7 +128,8 @@ selected.
   button: dark-to-gold gradient (`#211a0b` to `#4d3d14`), thin gold frame with `[ ▸ … ◂ ]` bracket
   corners, large white letter-spaced text.
   - ServerDog: a web page can't join a match (no known link scheme; parked). The same gold
-    button style is used for "copy join code" on the selected row (PLAN 2.8).
+    button style is used for "copy join code" on every row with a join code, in its own last
+    column after Timer; selection stays separate (PLAN 2.7b).
 
 ## 06-rows-top-selected-second-hovered.png
 
