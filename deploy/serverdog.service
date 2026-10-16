@@ -1,0 +1,39 @@
+# ServerDog systemd unit. Install to /etc/systemd/system/serverdog.service (see DEPLOY.md).
+# The binary listens on 127.0.0.1:8080 (plain HTTP); Apache terminates TLS and proxies to it.
+[Unit]
+Description=ServerDog (servers.dog)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=serverdog
+Group=serverdog
+ExecStart=/usr/local/bin/serverdog --config /etc/serverdog/serverdog.json
+# /var/lib/serverdog, owned by the serverdog user: servers.json and tracker.json.
+StateDirectory=serverdog
+WorkingDirectory=/var/lib/serverdog
+Restart=on-failure
+RestartSec=5
+# SIGTERM stops the scheduler, then HTTP shuts down within 10s.
+TimeoutStopSec=20
+
+# Hardening. The binary needs no privileges: it binds a high port on loopback and writes
+# only to its state directory.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target

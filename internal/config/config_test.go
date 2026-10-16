@@ -193,3 +193,20 @@ func TestLoadHelp(t *testing.T) {
 		t.Errorf("Load(-h) error = %v, want flag.ErrHelp", err)
 	}
 }
+
+// TestDeployExampleConfig keeps deploy/serverdog.example.json loadable as the config keys change.
+func TestDeployExampleConfig(t *testing.T) {
+	c, err := Load([]string{"--config", filepath.Join("..", "..", "deploy", "serverdog.example.json")}, env(nil))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if c.Listen != "127.0.0.1:8080" {
+		t.Errorf("Listen = %q, want loopback 127.0.0.1:8080 (Apache proxies to it)", c.Listen)
+	}
+	if c.TLSCert != "" || c.TLSKey != "" {
+		t.Errorf("TLS set (%q, %q), want unset: Apache terminates TLS", c.TLSCert, c.TLSKey)
+	}
+	if c.DataDir != "/var/lib/serverdog" {
+		t.Errorf("DataDir = %q, want the unit's StateDirectory /var/lib/serverdog", c.DataDir)
+	}
+}

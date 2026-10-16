@@ -1,0 +1,16 @@
+{
+  "source": "wardogservers",
+  "listen": "127.0.0.1:8080",
+  "data_dir": "/var/lib/serverdog",
+  "cache_file": "/var/lib/serverdog/tracker.json",
+  "user_agent_contact": "ogredforman@gmail.com",
+
+  "burst_rate": 4,
+  "burst_budget": 200,
+  "sweep_rate": 1.5,
+  "concurrency": 3,
+  "poll_delay": "10s",
+  "starting_window": "20m",
+  "drop_pct": 30,
+  "drop_min": 25
+}
