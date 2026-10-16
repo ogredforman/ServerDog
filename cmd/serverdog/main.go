@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -101,10 +102,16 @@ func run() error {
 		Handler:           site,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	ln, err := net.Listen("tcp", cfg.Listen)
+	if err != nil {
+		cancelSched()
+		<-schedDone
+		return fmt.Errorf("listen on %s: %w", cfg.Listen, err)
+	}
 	errc := make(chan error, 1)
 	go func() {
-		slog.Info("listening", "addr", cfg.Listen, "source", cfg.Source, "data_dir", cfg.DataDir)
-		errc <- srv.ListenAndServe()
+		slog.Info("listening", "addr", ln.Addr().String(), "tls", cfg.TLSCert != "", "source", cfg.Source, "data_dir", cfg.DataDir)
+		errc <- serve(srv, ln, cfg.TLSCert, cfg.TLSKey)
 	}()
 
 	var serveErr error
@@ -128,6 +135,15 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+// serve serves srv on ln: HTTPS with the given cert/key files when certFile is set, plain HTTP
+// otherwise (SPEC §8 HTTP serving). Config guarantees both or neither are set.
+func serve(srv *http.Server, ln net.Listener, certFile, keyFile string) error {
+	if certFile != "" {
+		return srv.ServeTLS(ln, certFile, keyFile)
+	}
+	return srv.Serve(ln)
 }
 
 // loadCache restores the tracker from its cache file. A missing or unreadable file is a cold

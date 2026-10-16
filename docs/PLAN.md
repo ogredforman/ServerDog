@@ -144,7 +144,7 @@ and unpredictability.
   - `/healthz` with last snapshot age, `no-store`.
 
   Handler tests for every header (SPEC §8 HTTP serving, §5 Flat origin load).
-- [ ] **2.5** Add HTTPS: serve TLS on `listen` when `tls_cert`/`tls_key` are set, plain HTTP otherwise. Test with a generated self-signed cert. Add a publisher test that gzip size stays under 100 KB at 4,000 generated servers (SPEC §8 HTTP serving, §8 Published data).
+- [x] **2.5** Add HTTPS: serve TLS on `listen` when `tls_cert`/`tls_key` are set, plain HTTP otherwise. Test with a generated self-signed cert. Add a publisher test that gzip size stays under 100 KB at 4,000 generated servers (SPEC §8 HTTP serving, §8 Published data).
 
 ### In-game look (uses `design/screenshots/`, `design/maps/`, `design/fonts/`)
 
