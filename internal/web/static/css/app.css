@@ -150,6 +150,12 @@ main {
   margin: 0 auto;
   padding: 0 clamp(16px, 5vw, 100px);
 }
+/* The browser view scrolls inside #list-panel, so main may shrink to the viewport. The type
+   picker doesn't: when its stacked cards are taller than the screen, main grows and the page
+   scrolls, keeping the footer below the cards instead of on top of them. The navbar and footer
+   never shrink, or their text would spill over main. */
+main:has(> #type-picker:not([hidden])) { min-height: auto; }
+#navbar, footer { flex-shrink: 0; }
 
 #load-status {
   margin: 48px 0;

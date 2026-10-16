@@ -173,6 +173,7 @@ and unpredictability.
 
 - [x] **2.8b** Show each server's region in its row name, as in-game, so rows from several selected regions can be told apart: official `Official #97` → `OFFICIAL WARDOGS | North America (East) | #97`, other names `<name> | <region>`; sorting by name is unchanged (SPEC §11).
 - [x] **2.8c** Add a tab icon: a gold dog tag with a stopwatch, an inline SVG data URL in `<head>` (no extra request or route) (SPEC §9 Page weight, Privacy).
+- [x] **2.8d** Fix the mobile layout on the type picker: when the stacked cards are taller than the screen, the page scrolls with the footer below the cards (it was drawn over them), and the navbar and footer never shrink (the navbar's brand and disclaimer were drawn over the first card). The browser view still scrolls inside the list panel (SPEC §8 Browser UI).
 
 ### Deploy and go live
 
