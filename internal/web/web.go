@@ -33,6 +33,13 @@ var assetTypes = map[string]string{
 	".txt":   "text/plain; charset=utf-8", // the font license
 }
 
+// rootFiles are embedded files served at the site root for search engines, with their
+// Content-Type. They name https://servers.dog, the production origin, directly.
+var rootFiles = map[string]string{
+	"robots.txt":  "text/plain; charset=utf-8",
+	"sitemap.xml": "application/xml; charset=utf-8",
+}
+
 // assetDirs are the embedded directories served, each under its own URL prefix ("/js/…").
 var assetDirs = []string{"js", "css", "fonts"}
 
@@ -87,6 +94,9 @@ func New(clk clock.Clock, dataDir string) *Site {
 	s.mux.HandleFunc("GET /data/"+publish.FileName, s.serveData)
 	for _, dir := range assetDirs {
 		s.mux.HandleFunc("GET /"+dir+"/{path...}", s.serveAsset)
+	}
+	for name, ctype := range rootFiles {
+		s.mux.HandleFunc("GET /"+name, serveRootFile(name, ctype))
 	}
 	s.mux.HandleFunc("GET /healthz", s.serveHealth)
 	s.mux.HandleFunc("/", notFound)
@@ -236,6 +246,19 @@ func (s *Site) serveIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", cacheIndex)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(s.index)
+}
+
+// serveRootFile serves the embedded static/<name> with the index's Cache-Control.
+func serveRootFile(name, ctype string) http.HandlerFunc {
+	body, err := static.ReadFile("static/" + name)
+	if err != nil {
+		panic(fmt.Sprintf("web: read embedded %s: %v", name, err))
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", cacheIndex)
+		w.Header().Set("Content-Type", ctype)
+		http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(body))
+	}
 }
 
 // serveAsset serves a file of a known type from the embedded static FS. Directories and

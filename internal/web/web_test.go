@@ -66,6 +66,9 @@ func TestHandler(t *testing.T) {
 		{"js directory", false, http.MethodGet, "/js/logic/", http.StatusNotFound, "no-store", "", ""},
 		{"js unknown type", false, http.MethodGet, "/js/logic", http.StatusNotFound, "no-store", "", ""},
 		{"unclean path redirect", false, http.MethodGet, "/js/../index.html", http.StatusTemporaryRedirect, "no-store", "", ""},
+		{"robots.txt", false, http.MethodGet, "/robots.txt", http.StatusOK, "public, max-age=60, s-maxage=300", "text/plain; charset=utf-8", "Sitemap: https://servers.dog/sitemap.xml"},
+		{"sitemap.xml", false, http.MethodGet, "/sitemap.xml", http.StatusOK, "public, max-age=60, s-maxage=300", "application/xml; charset=utf-8", "<loc>https://servers.dog/</loc>"},
+		{"sitemap POST", false, http.MethodPost, "/sitemap.xml", http.StatusNotFound, "no-store", "", ""},
 		{"other data file", true, http.MethodGet, "/data/tracker.json", http.StatusNotFound, "no-store", "", ""},
 	}
 	for _, tt := range tests {
@@ -253,6 +256,24 @@ func TestDisclaimerInNavbarAndFooter(t *testing.T) {
 	}
 }
 
+// TestSearchMetadata checks what search engines read: a title naming Wardogs, a description,
+// the canonical URL and the footer blurb, the only static text describing the site.
+func TestSearchMetadata(t *testing.T) {
+	s, _ := newSite(t, `{}`)
+	index := servedIndex(t, s)
+	for _, want := range []string{
+		`<title>ServerDog: Wardogs Server Browser`,
+		`<meta name="description" content="Live list of every Wardogs server`,
+		`<link rel="canonical" href="https://servers.dog/">`,
+		`<script type="application/ld+json">`,
+		`<p class="about">ServerDog is a live list of every Wardogs server`,
+	} {
+		if !strings.Contains(index, want) {
+			t.Errorf("index.html does not contain %q", want)
+		}
+	}
+}
+
 // thirdPartyRef matches an absolute or protocol-relative URL the browser would load (SPEC §9 Privacy).
 var thirdPartyRef = regexp.MustCompile(`(?:src|href)\s*=\s*["']?(?:https?:)?//|url\(\s*["']?(?:https?:)?//|(?:from|import|fetch)\s*\(?\s*["'` + "`" + `](?:https?:)?//`)
 
@@ -280,6 +301,8 @@ func TestNoThirdPartyRequests(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, body := range files {
+		// servers.dog is our own origin; the index names it only in the canonical link, which isn't fetched.
+		body = strings.ReplaceAll(body, `href="https://servers.dog/"`, `href="/"`)
 		if m := thirdPartyRef.FindString(body); m != "" {
 			t.Errorf("%s loads from another host: %q", name, m)
 		}

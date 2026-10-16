@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /healthz
+
+Sitemap: https://servers.dog/sitemap.xml

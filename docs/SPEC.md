@@ -157,6 +157,7 @@ Servers that left the snapshot are dropped from the tracker after 1 hour.
 - [M] Caching headers: `servers.json` as in §7.4. `index.html` `public, max-age=60, s-maxage=300`. Versioned assets (`?v=<content hash>`, filled into `index.html` at startup) `public, max-age=31536000, immutable`.
 - [M] HTTPS on a configurable address with configured cert/key files. Plain HTTP when no cert is set. In production nginx terminates TLS with the Cloudflare Origin Certificate and proxies to plain HTTP on loopback (ADR 0001).
 - [M] `/healthz` returns 200 with last snapshot age. It is never cached.
+- [M] Search engines: `/robots.txt` and `/sitemap.xml` are embedded files naming the production origin `https://servers.dog`, served with the `index.html` `Cache-Control`. `index.html` carries a title, meta description, canonical link, Open Graph tags and a JSON-LD block, all inline (no request).
 
 **Browser UI**
 - [P] Server type picker (official / community) and multi-region selection, both remembered in localStorage.

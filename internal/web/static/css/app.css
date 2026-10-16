@@ -487,6 +487,7 @@ footer {
   gap: 4px;
 }
 footer a { color: var(--text); }
+footer .about { margin: 0 auto; max-width: 70ch; font-size: 13px; }
 
 @media (max-width: 720px) {
   #navbar { flex-wrap: wrap; }

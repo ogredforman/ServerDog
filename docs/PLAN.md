@@ -174,6 +174,10 @@ and unpredictability.
 - [x] **2.8b** Show each server's region in its row name, as in-game, so rows from several selected regions can be told apart: official `Official #97` → `OFFICIAL WARDOGS | North America (East) | #97`, other names `<name> | <region>`; sorting by name is unchanged (SPEC §11).
 - [x] **2.8c** Add a tab icon: a gold dog tag with a stopwatch, an inline SVG data URL in `<head>` (no extra request or route) (SPEC §9 Page weight, Privacy).
 - [x] **2.8d** Fix the mobile layout on the type picker: when the stacked cards are taller than the screen, the page scrolls with the footer below the cards (it was drawn over them), and the navbar and footer never shrink (the navbar's brand and disclaimer were drawn over the first card). The browser view still scrolls inside the list panel (SPEC §8 Browser UI).
+- [x] **2.8e** Search engine basics so "wardogs servers" searches can find servers.dog:
+  - `<head>`: a title naming Wardogs, meta description, canonical `https://servers.dog/`, Open Graph/Twitter tags and a JSON-LD `WebSite` block (all inline, nothing fetched);
+  - a one-sentence footer blurb describing the site, the only static text a crawler sees;
+  - `/robots.txt` (sitemap link, `/healthz` disallowed; `/data/` stays crawlable so rendered pages show servers) and `/sitemap.xml`, embedded, with the index `Cache-Control` (SPEC §8 HTTP serving, §9 Privacy).
 
 ### Deploy and go live
 
