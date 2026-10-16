@@ -256,6 +256,15 @@ func TestDisclaimerInNavbarAndFooter(t *testing.T) {
 // thirdPartyRef matches an absolute or protocol-relative URL the browser would load (SPEC §9 Privacy).
 var thirdPartyRef = regexp.MustCompile(`(?:src|href)\s*=\s*["']?(?:https?:)?//|url\(\s*["']?(?:https?:)?//|(?:from|import|fetch)\s*\(?\s*["'` + "`" + `](?:https?:)?//`)
 
+// TestTabIcon checks the page has a tab icon inlined as an SVG data URL, so it costs no request.
+func TestTabIcon(t *testing.T) {
+	s, _ := newSite(t, `{}`)
+	head, _, _ := strings.Cut(servedIndex(t, s), "</head>")
+	if !strings.Contains(head, `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,`) {
+		t.Error(`index.html <head> has no inline SVG <link rel="icon">`)
+	}
+}
+
 func TestNoThirdPartyRequests(t *testing.T) {
 	s, _ := newSite(t, `{}`)
 	files := map[string]string{"/": servedIndex(t, s)}

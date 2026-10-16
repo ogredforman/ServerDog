@@ -172,6 +172,7 @@ and unpredictability.
 - [x] **2.8** Add the final disclaimer ("Unofficial fan site. Not affiliated with or endorsed by Bulkhead or Wardogs.") in both the navbar (always visible) and the footer. The footer also credits api.wardogservers.com and gives a contact. Make the selected row's copy-join-code button work, with "Copied" feedback. Confirm the first load is under 150 KB, with no third-party requests (SPEC §5 Unmistakably unofficial, §8 Browser UI, §9 Page weight, Privacy).
 
 - [x] **2.8b** Show each server's region in its row name, as in-game, so rows from several selected regions can be told apart: official `Official #97` → `OFFICIAL WARDOGS | North America (East) | #97`, other names `<name> | <region>`; sorting by name is unchanged (SPEC §11).
+- [x] **2.8c** Add a tab icon: a gold dog tag with a stopwatch, an inline SVG data URL in `<head>` (no extra request or route) (SPEC §9 Page weight, Privacy).
 
 ### Deploy and go live
 
