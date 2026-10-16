@@ -1,0 +1,206 @@
+{
+  "data": [
+    {
+      "id": "0005b3a4-fc90-4f69-8ac6-77c9fdd57057",
+      "serverId": "635219",
+      "serverIdUpdatedAt": "2026-10-16T01:17:25.138Z",
+      "observedAt": "2026-10-16T01:17:25.138Z",
+      "name": "Official #73",
+      "nativeName": "e7fc77641d81",
+      "type": "official",
+      "region": "na-north",
+      "players": 100,
+      "maxPlayers": 100,
+      "reservedPlayers": 0,
+      "passwordProtected": false,
+      "serverNumber": 73,
+      "map": {
+        "variant": "Madrid",
+        "base": "Kavkazi"
+      },
+      "mode": {
+        "experience": "Madrid_KOTH_01",
+        "gameMode": "GM_Session_C",
+        "modifiers": []
+      },
+      "rulesets": [
+        "standard"
+      ]
+    },
+    {
+      "id": "00173bc8-2a95-4d3f-abd0-5a28556d326c",
+      "serverId": "327945",
+      "serverIdUpdatedAt": "2026-10-16T01:17:25.138Z",
+      "observedAt": "2026-10-16T01:17:25.138Z",
+      "name": "Official #11",
+      "nativeName": "50f84b8e7f2e",
+      "type": "official",
+      "region": "na-north",
+      "players": 100,
+      "maxPlayers": 100,
+      "reservedPlayers": 0,
+      "passwordProtected": false,
+      "serverNumber": 11,
+      "map": {
+        "variant": "Madrid",
+        "base": "Kavkazi"
+      },
+      "mode": {
+        "experience": "Madrid_KOTH_01",
+        "gameMode": "GM_Session_C",
+        "modifiers": []
+      },
+      "rulesets": [
+        "standard"
+      ]
+    },
+    {
+      "id": "009b8513-9c83-49da-b51f-e880bc1936fc",
+      "serverId": "7a1cec1a-a7b0-4b6d-99a8-a085596ac09d",
+      "serverIdUpdatedAt": "2026-10-16T01:16:56.253Z",
+      "observedAt": "2026-10-16T01:16:56.253Z",
+      "name": "#2 EU - CodeFourGaming - 50v50 Infantry - discord.gg/c4g",
+      "nativeName": "#2 EU - CodeFourGaming - 50v50 Infantry - discord.gg/c4g",
+      "type": "community",
+      "region": "eu-central",
+      "players": 98,
+      "maxPlayers": 100,
+      "reservedPlayers": 3,
+      "passwordProtected": false,
+      "serverNumber": 0,
+      "map": {
+        "variant": "Madrid",
+        "base": "Kavkazi"
+      },
+      "mode": {
+        "experience": "Madrid_KOTH_01+KOTH_InfantryOnly",
+        "gameMode": "GM_Session_C",
+        "modifiers": [
+          "KOTH_InfantryOnly"
+        ]
+      },
+      "rulesets": [
+        "infantry-only"
+      ]
+    },
+    {
+      "id": "00232dcd-b5f9-4ee9-a329-f054a3bfd9fc",
+      "serverId": "8082ca78-226d-403c-9a25-9b455e60f234",
+      "serverIdUpdatedAt": "2026-10-16T01:17:11.891Z",
+      "observedAt": "2026-10-16T01:17:11.891Z",
+      "name": "[ZTAX] Infantry Only Wardogs - 24/7 KOTH - Stat Tracking",
+      "nativeName": "[ZTAX] Infantry Only Wardogs - 24/7 KOTH - Stat Tracking",
+      "type": "community",
+      "region": "na-east",
+      "players": 0,
+      "maxPlayers": 100,
+      "reservedPlayers": 0,
+      "passwordProtected": false,
+      "serverNumber": 0,
+      "map": {
+        "variant": "Bakurani",
+        "base": "Kavkazi"
+      },
+      "mode": {
+        "experience": "Bakurani_KOTH_02",
+        "gameMode": "GM_Session_C",
+        "modifiers": []
+      },
+      "rulesets": [
+        "standard"
+      ]
+    },
+    {
+      "id": "02172d1b-992d-4827-8520-6d67ce5085df",
+      "serverId": "9baacce6-78ce-447c-9155-3fff3233b307",
+      "serverIdUpdatedAt": "2026-10-16T01:16:45.734Z",
+      "observedAt": "2026-10-16T01:16:45.734Z",
+      "name": "My Community Server",
+      "nativeName": "My Community Server",
+      "type": "community",
+      "region": "eu-east",
+      "players": 0,
+      "maxPlayers": 60,
+      "reservedPlayers": 0,
+      "passwordProtected": true,
+      "serverNumber": 0,
+      "map": {
+        "variant": "Bakurani",
+        "base": "Kavkazi"
+      },
+      "mode": {
+        "experience": "Bakurani_KOTH_02",
+        "gameMode": "GM_Session_C",
+        "modifiers": []
+      },
+      "rulesets": [
+        "standard"
+      ]
+    },
+    {
+      "id": "0189e90a-cc78-4f6a-bcc2-cc6987260cd0",
+      "serverId": "789280",
+      "serverIdUpdatedAt": "2026-10-16T01:17:51.291Z",
+      "observedAt": "2026-10-16T01:17:51.291Z",
+      "name": "Official #61",
+      "nativeName": "5eec39755947",
+      "type": "official",
+      "region": "oceania",
+      "players": 100,
+      "maxPlayers": 100,
+      "reservedPlayers": 0,
+      "passwordProtected": false,
+      "serverNumber": 61,
+      "map": {
+        "variant": "Bakurani",
+        "base": "Kavkazi"
+      },
+      "mode": {
+        "experience": "Bakurani_KOTH_02",
+        "gameMode": "GM_Session_C",
+        "modifiers": []
+      },
+      "rulesets": [
+        "standard"
+      ]
+    }
+  ],
+  "meta": {
+    "fetchedAt": "2026-10-16T01:17:51.359Z",
+    "snapshotId": "e19ec70bc5230aabe96757c3512ae0b18f0251800732ff4be10d3ff72c59a7b0",
+    "refreshSeconds": 180,
+    "stale": false,
+    "requestedRegions": [
+      "asia-east",
+      "asia-se",
+      "asia-west",
+      "eu-central",
+      "eu-east",
+      "eu-south",
+      "eu-west",
+      "na-central",
+      "na-east",
+      "na-north",
+      "na-west",
+      "oceania",
+      "south-america"
+    ],
+    "observedRegions": [
+      "asia-east",
+      "asia-se",
+      "asia-west",
+      "eu-central",
+      "eu-east",
+      "eu-south",
+      "eu-west",
+      "na-central",
+      "na-east",
+      "na-north",
+      "na-west",
+      "oceania",
+      "south-america"
+    ],
+    "complete": true,
+    "partial": []
+  }
+}

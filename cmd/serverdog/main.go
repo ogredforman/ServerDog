@@ -18,12 +18,17 @@ import (
 	"github.com/ogredforman/ServerDog/internal/scheduler"
 	"github.com/ogredforman/ServerDog/internal/source"
 	"github.com/ogredforman/ServerDog/internal/source/fake"
+	"github.com/ogredforman/ServerDog/internal/source/wardogservers"
 	"github.com/ogredforman/ServerDog/internal/tracker"
 	"github.com/ogredforman/ServerDog/internal/web"
 )
 
 // fakeSeed fixes the generated world for source=fake, so local runs are reproducible.
 const fakeSeed = 1
+
+// version is reported in the upstream User-Agent. Release builds set it with
+// -ldflags "-X main.version=<version>".
+var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
@@ -122,7 +127,13 @@ func newSource(cfg config.Config, clk clock.Clock) (source.Source, error) {
 	switch cfg.Source {
 	case config.SourceFake:
 		return fake.NewWorld(clk, fakeSeed), nil
+	case config.SourceWardogServers:
+		return wardogservers.New(wardogservers.Options{
+			BaseURL: cfg.UpstreamURL,
+			Version: version,
+			Contact: cfg.UserAgentContact,
+		}), nil
 	default:
-		return nil, fmt.Errorf("source %q is not available until PLAN 2.1; run with --source fake", cfg.Source)
+		return nil, fmt.Errorf("unknown source %q", cfg.Source)
 	}
 }

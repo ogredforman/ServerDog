@@ -129,7 +129,7 @@ and unpredictability.
 
 ### Real provider and hardening
 
-- [ ] **2.1** Implement the wardogservers.com adapter in `internal/source/wardogservers`:
+- [x] **2.1** Implement the wardogservers.com adapter in `internal/source/wardogservers`:
   - `/v1/snapshot` with ETag/If-None-Match → `ErrNotModified`;
   - `/v1/servers/{serverId}` with `MatchStartUTC` .NET-tick decoding (`-1` → NotStarted, missing → Unknown);
   - 429/503 + `Retry-After` → `RetryAfterError`;

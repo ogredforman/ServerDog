@@ -1,0 +1,100 @@
+{
+  "data": {
+    "id": "0005b3a4-fc90-4f69-8ac6-77c9fdd57057",
+    "serverId": "635219",
+    "serverIdUpdatedAt": "2026-10-16T01:17:25.138Z",
+    "observedAt": "2026-10-16T01:17:25.138Z",
+    "name": "Official #73",
+    "nativeName": "e7fc77641d81",
+    "type": "official",
+    "region": "na-north",
+    "players": 100,
+    "maxPlayers": 100,
+    "reservedPlayers": 0,
+    "passwordProtected": false,
+    "serverNumber": 73,
+    "map": {
+      "variant": "Madrid",
+      "base": "Kavkazi",
+      "path": "/Game/Maps/Worlds/Europe/Europe.Europe"
+    },
+    "mode": {
+      "experience": "Madrid_KOTH_01",
+      "gameMode": "GM_Session_C",
+      "modifiers": [],
+      "path": "/Game/GameMechanics/Gamemode/GM_Session.GM_Session_C"
+    },
+    "rulesets": [
+      "standard"
+    ],
+    "attributes": {
+      "MAPNAME": "str:Kavkazi",
+      "WD_SESSION_MAP": "str:/Game/Maps/Worlds/Europe/Europe.Europe",
+      "WD_SESSION_MODE": "str:/Game/GameMechanics/Gamemode/GM_Session.GM_Session_C",
+      "GameMode": "str:GM_Session_C",
+      "MaxSpectators": "int:0",
+      "MatchStartUTC": "int64:-1",
+      "PERSIST_PROGRESSION": "bool:true",
+      "CL": "int:516586",
+      "CompatibleCL": "int:516573",
+      "BuildConfiguration": "str:Shipping",
+      "WD_SESSION_TYPE": "int:1",
+      "ScenarioState": "str:",
+      "Sky": "str:DayEarlyClear",
+      "Experience": "str:Madrid_KOTH_01",
+      "VariantMapName": "str:Madrid",
+      "ScorePeriod": "float:24.000000"
+    },
+    "build": {
+      "changelist": "516586",
+      "compatibleChangelist": "516573",
+      "configuration": "Shipping"
+    },
+    "level": {
+      "min": 0,
+      "max": 0
+    },
+    "cash": {
+      "min": "0",
+      "max": "0"
+    }
+  },
+  "meta": {
+    "fetchedAt": "2026-10-16T01:17:51.359Z",
+    "snapshotId": "e19ec70bc5230aabe96757c3512ae0b18f0251800732ff4be10d3ff72c59a7b0",
+    "refreshSeconds": 180,
+    "stale": false,
+    "requestedRegions": [
+      "asia-east",
+      "asia-se",
+      "asia-west",
+      "eu-central",
+      "eu-east",
+      "eu-south",
+      "eu-west",
+      "na-central",
+      "na-east",
+      "na-north",
+      "na-west",
+      "oceania",
+      "south-america"
+    ],
+    "observedRegions": [
+      "asia-east",
+      "asia-se",
+      "asia-west",
+      "eu-central",
+      "eu-east",
+      "eu-south",
+      "eu-west",
+      "na-central",
+      "na-east",
+      "na-north",
+      "na-west",
+      "oceania",
+      "south-america"
+    ],
+    "complete": true,
+    "partial": []
+  }
+}

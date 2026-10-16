@@ -19,12 +19,12 @@ Signatures here are summaries; `go doc ./internal/<pkg>` (or `go doc ./internal/
 
 ## Wiring
 
-`cmd/serverdog/main.go`: `config.Load` → `newSource` (`fake.NewWorld(clock.Real{}, 1)`; `wardogservers` exits with an error until PLAN 2.1; `cmd/serverdog` is the only non-`source` importer of a provider) → `tracker.New` → `scheduler.New` (Publish = `publish.Write` then `site.Published`) → `http.Server` on `cfg.Listen` with `web.New`. SIGINT/SIGTERM: cancel and await the scheduler, then `Shutdown` (10s).
+`cmd/serverdog/main.go`: `config.Load` → `newSource` (`wardogservers.New` by default with `UpstreamURL`, `version` (ldflags `-X main.version=`) and `UserAgentContact`; `fake.NewWorld(clock.Real{}, 1)` for `source=fake`; `cmd/serverdog` is the only non-`source` importer of a provider) → `tracker.New` → `scheduler.New` (Publish = `publish.Write` then `site.Published`) → `http.Server` on `cfg.Listen` with `web.New`. SIGINT/SIGTERM: cancel and await the scheduler, then `Shutdown` (10s).
 
 ## Packages
 
 - **source** (`internal/source`, SPEC §6.1, §10.3): provider-neutral interface and types. Key: `Source{Snapshot(ctx, prevTag), MatchStart(ctx, serverID)}`, `Snapshot`, `Server`, `ServerType`, `MatchStart`, `MatchStartState`, `Map`, `Mode`, `ErrNotModified`, `RetryAfterError`.
-- **source/wardogservers** (SPEC §8 Data provider, §10.3): api.wardogservers.com adapter; all provider URLs, JSON, `int64:` ticks, ETags live here. Placeholder until PLAN 2.1.
+- **source/wardogservers** (SPEC §8 Data provider, §10.3): api.wardogservers.com adapter; all provider URLs, JSON, `int64:` ticks, ETags live here. Key: `New(Options{BaseURL, Version, Contact, HTTPClient}) *Client` (20s timeout), `UserAgent(version, contact)`; ETag → `Snapshot.Tag`, 304 → `ErrNotModified`, 429/503 → `RetryAfterError` (seconds or HTTP date vs response `Date`, default 15s); upstream `id` = `InstanceID`, `serverId` = join code; unknown `type` servers are skipped.
 - **source/fake** (SPEC §10.4): `New(clk)` scriptable fake Source for tests (records `Calls()`); `NewWorld(clk, seed)` deterministic generated world for `source=fake` (`WorldServers`, `WorldRefresh`; pure function of seed + clock time, no call record).
 - **clock** (`internal/clock`, SPEC §10.3–10.4): only source of time under `internal/`. Key: `Clock{Now, After}`, `Real`, `Fake` (`NewFake`, `Set`, `Advance` fires due `After`s in deadline order, `Pending`, `BlockUntil(n)` to sync with goroutines parked on `After`, `Next` earliest pending deadline).
 - **config** (`internal/config`, SPEC §8 Configuration): `Load(args, getenv) (Config, error)`; flags (`--burst-rate`) → env (`SERVERDOG_BURST_RATE`) → JSON file (`--config`/`SERVERDOG_CONFIG`, key `burst_rate`) → defaults. One `settings()` table holds key, default and validation.
@@ -43,7 +43,7 @@ Signatures here are summaries; `go doc ./internal/<pkg>` (or `go doc ./internal/
 
 - `internal/web/web_test.go`: `httptest` against `Site` (`newSite` helper: temp data dir + fake clock). `internal/config/config_test.go`: precedence and validation tables, files in `t.TempDir()`. `internal/tracker/tracker_test.go`: per-rule tier, apply and published tables (`srv`/`snap` helpers). `internal/publish/publish_test.go`: schema, state, stale and atomic-write tables against a real tracker. `internal/scheduler/*_test.go`: `driveWaits` (fake-clock limiter driver), `newPoller`/`snap` helpers; `scheduler_test.go` `harness` (event log of requests + publishes, `run` steps the clock via `BlockUntil`+`Next`, `cycles()`, `checkPolite` politeness asserts). `internal/source/source_test.go`, `internal/clock/clock_test.go`: table-driven type/helper tests.
 - `web-tests/`: one table-driven `node --test` file per `js/logic` module (`timer`, `filters`, `sort`, `stale`, `clock`, `refresh`, `prefs`, `view`), importing via relative path.
-- `testdata/wardogservers/`: recorded upstream fixtures for `httptest.Server`; empty until PLAN 2.1.
+- `testdata/wardogservers/`: upstream fixtures recorded 2026-10-16 UTC (`snapshot.json` trimmed to 6 servers, ETag in the test; `detail-exact.json`; hand-edited `detail-not-started.json` / `detail-missing.json`; truncated `malformed.json`). `internal/source/wardogservers/wardogservers_test.go` `newFixtureServer(t, routes)` serves them by path and records requests; 429/503 are built per test.
 - Fake clock `clock.NewFake` and fake Source `fake.New(clk)`: use these in scheduler/tracker tests; assert politeness on `Calls()`. No test touches the network.
 - `fake.NewWorld(clk, seed)`: realistic multi-hundred-server data (rotations, player drops, not-started → exact) for scenario or publish tests that need volume.
 - One package: `go test ./internal/<pkg>/`. One frontend file: `node --test web-tests/<file>.test.js`.
